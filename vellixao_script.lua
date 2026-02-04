@@ -1,10 +1,9 @@
-local Luna = loadstring(game:HttpGet("https://paste.ee/r/WSCKThwW", true))()
+local Luna = loadstring(game:HttpGet("https://raw.githubusercontent.com/Nebula-Softworks/Luna-Interface-Suite/refs/heads/master/source.lua", true))()
 
 local HttpService = game:GetService("HttpService")
+local player = game.Players.LocalPlayer
 
 local configFile = "VELLIXAOHaikyuuConfig.json"
-
-local player = game.Players.LocalPlayer
 
 local config = {
     spikePower = 1,
@@ -36,7 +35,7 @@ local function loadConfig()
         end)
         if success then
             for k, v in pairs(result) do
-                config[k] = v  -- Update config fields directly
+                config[k] = v
             end
         end
     end
@@ -44,17 +43,15 @@ end
 
 -- Save configuration function
 local function saveConfig()
-    local data = HttpService:JSONEncode(config)  -- Encode the config directly
+    local data = HttpService:JSONEncode(config)
     writefile(configFile, data)
 end
 
--- Auto-load configuration on script start
 loadConfig()
-
 
 local Window = Luna:CreateWindow({
     Name = "VELLIXAO",
-    Subtitle = nil,
+    Subtitle = "Volleyball Legends",
     LogoID = "90804827107744",
     LoadingEnabled = true,
     LoadingTitle = "VELLIXAO",
@@ -63,26 +60,31 @@ local Window = Luna:CreateWindow({
         RootFolder = nil,
         ConfigFolder = "VELLIXAO"
     },
+    KeySystem = false -- Can be enabled if needed
 })
 
 Window:CreateHomeTab({
-    SupportedExecutors = {},
+    SupportedExecutors = {
+        "Synapse X", "Krnl", "Fluxus", "Script-Ware", "Electron", "Wave", "Delta", "CODex"
+    },
     DiscordInvite = "J37PW97j6a",
-    Icon = 1,
+    Icon = 1
 })
 
-local Tab = Window:CreateTab({
-    Name = "Auto Farm",
-    Icon = "agriculture",
-    ImageSource = "Material",
-    ShowTitle = true
-})
-
+-- Logic Helpers
 local VirtualInputManager = game:GetService("VirtualInputManager")
+local isRunning = false
+local enablejoin = false
+local powerfulServe = config.powerfulServeEnabled
 
-local isRunning = false -- Tracks the toggle state
+local function getCharacterData()
+    local char = player.Character
+    if char then
+        return char:FindFirstChild("Humanoid"), char:FindFirstChild("HumanoidRootPart")
+    end
+    return nil, nil
+end
 
--- Functions
 local function pressSpace()
     VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
     task.wait(0.1)
@@ -108,221 +110,109 @@ local function getRandomTargetPart()
             table.insert(parts, part)
         end
     end
-
     if #parts > 0 then
         return parts[math.random(1, #parts)]
     end
     return nil
 end
 
-local function getCharacterData()
-    local char = player.Character
-    if char then
-        return char:FindFirstChild("Humanoid"), char:FindFirstChild("HumanoidRootPart")
-    end
-    return nil, nil
-end
-
-local roundOverStats = player.PlayerGui.Interface.RoundOverStats
-local boundaryFolder = workspace:WaitForChild("Map"):WaitForChild("BallNoCollide"):WaitForChild("Boundaries")
-
-
-local function pressEscTwice()
-    task.wait(5)
-    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Escape, false, game)
-    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Escape, false, game)
-    task.wait(0.3)
-    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Escape, false, game)
-    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Escape, false, game)
-    task.wait(0.7)
-    print("Esc key pressed twice with different delays!")
-end
-
-local escPressed = false
-
-local function checkRoundOverStats()
-    while true do
-        if roundOverStats.Visible then
-            if not escPressed then
-                pressEscTwice()
-                escPressed = true
-            end
-        else
-            escPressed = false
-        end
-        task.wait(0.5)
-    end
-end
-
-
--- Toggle for all functionality
-Tab:CreateToggle({
-    Name = "Auto Farm",
-    Description = "Toggle Auto Farm",
-    CurrentValue = false,
-    Callback = function(Value)
-        isRunning = Value
-        print("All functionality is now " .. (Value and "enabled" or "disabled"))
-    end
-})
-
-if not boundaryFolder then
-    warn("Boundary folder not found! Check the path.")
-end
-
-local ballPrefix = "CLIENT_BALL_"
-
--- Function to find the ball
 local function getBall()
     for _, object in pairs(workspace:GetChildren()) do
-        if object:IsA("Model") and object.Name:match(ballPrefix) then
+        if object:IsA("Model") and object.Name:match("CLIENT_BALL_") then
             return object:FindFirstChild("Sphere.001") or object:FindFirstChild("Cube.001")
         end
     end
     return nil
 end
 
--- Start checking RoundOverStats visibility in parallel
-task.spawn(checkRoundOverStats)
-
-task.spawn(function()
-    while task.wait(0.3) do
-        if not isRunning then
-            continue
-        end
-
-        local ballPart = getBall()
-        local humanoid, humanoidRootPart = getCharacterData()
-
-        if ballPart and humanoid and humanoidRootPart then
-            humanoid:MoveTo(ballPart.Position)
-
-            local distance = (ballPart.Position - humanoidRootPart.Position).Magnitude
-
-            if distance <= 15 then
-                local targetPart = getRandomTargetPart()
-                if targetPart then
-                    local lookVector = (targetPart.Position - humanoidRootPart.Position).Unit
-                    humanoidRootPart.CFrame = CFrame.new(humanoidRootPart.Position, humanoidRootPart.Position + lookVector)
-                end
-
-                if ballPart.Position.Y > humanoidRootPart.Position.Y + 5 then
-                    pressSpace()
-                    pressClick()
-                end
-            end
-        end
-    end
-end)
-
-local enablejoin = false
-
 local function teamSelection()
     if not enablejoin then return end
-
     task.wait(10)
-
     local teamSelectionGui = player.PlayerGui.Interface.TeamSelection
     local gameInterface = player.PlayerGui.Interface.Game
-
     if not gameInterface.Visible then
         teamSelectionGui.Visible = true
     end
-
     while not gameInterface.Visible and enablejoin do
         local randomNum = math.random(1, 6)
         local button = teamSelectionGui["2"][tostring(randomNum)]
-
         if button and button:IsA("ImageButton") then
             local absPos = button.AbsolutePosition
             local absSize = button.AbsoluteSize
             local clickPosition = absPos + (absSize / 2)
-
             VirtualInputManager:SendMouseButtonEvent(clickPosition.X, clickPosition.Y, 0, true, game, 1)
             VirtualInputManager:SendMouseButtonEvent(clickPosition.X, clickPosition.Y, 0, false, game, 1)
         end
-
         task.wait(math.random(5, 15) / 10)
     end
-
     if gameInterface.Visible then
         teamSelectionGui.Visible = false
     end
 end
 
-player.CharacterAdded:Connect(function(character)
-    if enablejoin then
-        teamSelection()
-    end
-end)
+-- Tabs
+local AutoFarmTab = Window:CreateTab({
+    Name = "Auto Farm",
+    Icon = "agriculture",
+    ImageSource = "Material",
+    ShowTitle = true
+})
 
-Tab:CreateToggle({
-    Name = "Auto Join Match",
-    Description = "Automatically join a match after waiting for 30 seconds(to avoid getting bugged)",
+AutoFarmTab:CreateToggle({
+    Name = "Auto Farm",
+    Description = "Automatically move to ball and hit it",
     CurrentValue = false,
     Callback = function(Value)
-        enablejoin = Value
-        if enablejoin then
-            teamSelection()
-        end
+        isRunning = Value
     end
 })
 
-Tab:CreateSection("Misc")
+AutoFarmTab:CreateToggle({
+    Name = "Auto Join Match",
+    Description = "Automatically join a match team",
+    CurrentValue = false,
+    Callback = function(Value)
+        enablejoin = Value
+        if enablejoin then teamSelection() end
+    end
+})
+
+local MiscTab = Window:CreateTab({
+    Name = "Misc",
+    Icon = "extension",
+    ImageSource = "Material",
+    ShowTitle = true
+})
 
 local autoRotateConnection
-
-local function autorotateon()
-    autoRotateConnection = game:GetService("RunService").Heartbeat:Connect(function()
-        local humanoid = getCharacterData()
-        if humanoid and humanoid.AutoRotate == false then
-            humanoid.AutoRotate = true
-            print("AutoRotate has been re-enabled.")
-        end
-    end)
-end
-
-local function autorotateoff()
-    if autoRotateConnection then
-        autoRotateConnection:Disconnect()
-        autoRotateConnection = nil
-        print("AutoRotate monitoring has been disabled.")
-    end
-end
-
-Tab:CreateToggle({
+MiscTab:CreateToggle({
     Name = "Enable Rotate In The Air",
-    Description = "Toggle Rotate In The Air(Re-Enable This When You Switch Team",
+    Description = "Keeps AutoRotate enabled",
     CurrentValue = config.autoRotate,
     Callback = function(State)
         config.autoRotate = State
         saveConfig()
-        print("Toggle Rotate is now " .. (State and "enabled" or "disabled"))
-
+        if autoRotateConnection then autoRotateConnection:Disconnect() end
         if State then
-            autorotateon()
-        else
-            autorotateoff()
+            autoRotateConnection = game:GetService("RunService").Heartbeat:Connect(function()
+                local humanoid = getCharacterData()
+                if humanoid and humanoid.AutoRotate == false then
+                    humanoid.AutoRotate = true
+                end
+            end)
         end
     end
 })
 
-
-
-Tab:CreateButton({
-	Name = "Break The Match",
-	Description = "Stops the match(must be serving)",
-	Callback = function()
-            local ohNil1 = nil
-            local ohNumber2 = 0.95
-            game:GetService("ReplicatedStorage").Packages._Index["sleitnick_knit@1.7.0"].knit.Services.GameService.RF.Serve:InvokeServer(ohNil1, ohNumber2)
-	end
+MiscTab:CreateButton({
+    Name = "Break The Match",
+    Description = "Stops the match (must be serving)",
+    Callback = function()
+        game:GetService("ReplicatedStorage").Packages._Index["sleitnick_knit@1.7.0"].knit.Services.GameService.RF.Serve:InvokeServer(nil, 0.95)
+    end
 })
 
-local UserInputService = game:GetService("UserInputService")
-local powerfulServe = config.powerfulServeEnabled
-
-Tab:CreateToggle({
+MiscTab:CreateToggle({
     Name = "Enable Powerful Serve",
     Description = "Press Z to Powerful Serve",
     CurrentValue = config.powerfulServeEnabled,
@@ -333,352 +223,188 @@ Tab:CreateToggle({
     end
 })
 
-UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
-    if not gameProcessedEvent and input.KeyCode == Enum.KeyCode.Z then
-        if powerfulServe then
-            game:GetService("ReplicatedStorage").Packages._Index["sleitnick_knit@1.7.0"].knit.Services.GameService.RF.Serve:InvokeServer(Vector3.new(0, 0, 0), math.huge)
-        end
-    end
-end)
-
-local MiscTab = Window:CreateTab({
-    Name = "Misc",
-    Icon = "autorenew",
+local StatTab = Window:CreateTab({
+    Name = "Stat Changer",
+    Icon = "bolt",
     ImageSource = "Material",
     ShowTitle = true
 })
 
+local stats = {
+    {Name = "Dive Speed", Attr = "GameDiveSpeedMultiplier", Conf = "diveSpeed", Max = 5},
+    {Name = "Spike Power", Attr = "GameSpikePowerMultiplier", Conf = "spikePower", Max = 500},
+    {Name = "Tilt Power", Attr = "GameTiltPowerMultiplier", Conf = "tiltPower", Max = 500},
+    {Name = "Speed", Attr = "GameSpeedMultiplier", Conf = "speed", Max = 1.5},
+    {Name = "Set Power", Attr = "GameSetPowerMultiplier", Conf = "setPower", Max = 500},
+    {Name = "Serve Power", Attr = "GameServePowerMultiplier", Conf = "servePower", Max = 500},
+    {Name = "Jump Power", Attr = "GameJumpPowerMultiplier", Conf = "jumpPower", Max = 5},
+    {Name = "Bump Power", Attr = "GameBumpPowerMultiplier", Conf = "bumpPower", Max = 500},
+    {Name = "Block Power", Attr = "GameBlockPowerMultiplier", Conf = "blockPower", Max = 500}
+}
 
-MiscTab:CreateSection("Stat Changer")
+for _, stat in ipairs(stats) do
+    StatTab:CreateSlider({
+        Name = stat.Name,
+        Range = {0, stat.Max},
+        Increment = 0.1,
+        CurrentValue = config[stat.Conf],
+        Callback = function(Value)
+            player:SetAttribute(stat.Attr, Value)
+            config[stat.Conf] = Value
+            saveConfig()
+        end
+    })
+end
 
-MiscTab:CreateSlider({
-    Name = "Dive Speed",
-    Range = {0, 5},
-    Increment = 0.1,
-    CurrentValue = config.diveSpeed,
-    Callback = function(value)
-        player:SetAttribute("GameDiveSpeedMultiplier", value)
-        print("Dive Speed updated to " .. value)
-        config.diveSpeed = value
-        saveConfig()
-    end
-})
-
-
-MiscTab:CreateSlider({
-    Name = "Spike Power",
-    Range = {0, 500},
-    Increment = 0.1,
-    CurrentValue = config.spikePower,
-    Callback = function(value)
-        player:SetAttribute("GameSpikePowerMultiplier", value)
-        print("Spike Power updated to " .. value)
-        config.spikePower = value
-        saveConfig()
-    end
-})
-
-MiscTab:CreateSlider({
-    Name = "Tilt Power",
-    Range = {0, 500},
-    Increment = 0.1,
-    CurrentValue = config.tiltPower,
-    Callback = function(value)
-        player:SetAttribute("GameTiltPowerMultiplier", value)
-        print("Tilt Power updated to " .. value)
-        config.tiltPower = value
-        saveConfig()
-    end
-})
-
-MiscTab:CreateSlider({
-    Name = "Speed",
-    Range = {0, 1.5},
-    Increment = 0.1,
-    CurrentValue = config.speed,
-    Callback = function(value)
-        player:SetAttribute("GameSpeedMultiplier", value)
-        print("Speed updated to " .. value)
-        config.speed = value
-        saveConfig()
-    end
-})
-
-MiscTab:CreateSlider({
-    Name = "Set Power",
-    Range = {0, 500},
-    Increment = 0.1,
-    CurrentValue = config.setPower,
-    Callback = function(value)
-        player:SetAttribute("GameSetPowerMultiplier", value)
-        print("Set Power updated to " .. value)
-        config.setPower = value
-        saveConfig()
-    end
-})
-
-MiscTab:CreateSlider({
-    Name = "Serve Power",
-    Range = {0, 500},
-    Increment = 0.1,
-    CurrentValue = config.servePower,
-    Callback = function(value)
-        player:SetAttribute("GameServePowerMultiplier", value)
-        print("Serve Power updated to " .. value)
-        config.servePower = value
-        saveConfig()
-    end
-})
-
-MiscTab:CreateSlider({
-    Name = "Jump Power",
-    Range = {0, 5},
-    Increment = 0.1,
-    CurrentValue = config.jumpPower,
-    Callback = function(value)
-        player:SetAttribute("GameJumpPowerMultiplier", value)
-        print("Jump Power updated to " .. value)
-        config.jumpPower = value
-        saveConfig()
-    end
-})
-
-MiscTab:CreateSlider({
-    Name = "Bump Power",
-    Range = {0, 500},
-    Increment = 0.1,
-    CurrentValue = config.bumpPower,
-    Callback = function(value)
-        player:SetAttribute("GameBumpPowerMultiplier", value)
-        print("Bump Power updated to " .. value)
-        config.bumpPower = value
-        saveConfig()
-    end
-})
-
-MiscTab:CreateSlider({
-    Name = "Block Power",
-    Range = {0, 500},
-    Increment = 0.1,
-    CurrentValue = config.blockPower,
-    Callback = function(value)
-        player:SetAttribute("GameBlockPowerMultiplier", value)
-        print("Block Power updated to " .. value)
-        config.blockPower = value
-        saveConfig()
-    end
-})
-
-local Hitbox = Window:CreateTab({
+local HitboxTab = Window:CreateTab({
     Name = "Hitboxes",
-    Icon = "settings",
+    Icon = "fullscreen",
     ImageSource = "Material",
     ShowTitle = true
 })
 
-Hitbox:CreateSection("Hitbox Extender")
+local hitboxes = {
+    {Name = "Spike Hitbox Size", Path = "Spike", Conf = "spikeHitbox"},
+    {Name = "Jump Set Hitbox Size", Path = "JumpSet", Conf = "jumpsetHitbox"},
+    {Name = "Set Hitbox Size", Path = "Set", Conf = "setHitbox"},
+    {Name = "Serve Hitbox Size", Path = "Serve", Conf = "serveHitbox"},
+    {Name = "Dive Hitbox Size", Path = "Dive", Conf = "diveHitbox"},
+    {Name = "Bump Hitbox Size", Path = "Bump", Conf = "bumpHitbox"},
+    {Name = "Block Hitbox Size", Path = "Block", Conf = "blockHitbox"}
+}
 
-Hitbox:CreateSlider({
-    Name = "Spike Hitbox Size",
-    Range = {1, 100},
-    Increment = 0.1,
-    CurrentValue = config.spikeHitbox,
-    Callback = function(value)
-        local spikeHitbox = game:GetService("ReplicatedStorage").Assets.Hitboxes.Spike
-        local part = spikeHitbox:FindFirstChild("Part")
-
-        if part and part:IsA("BasePart") then
-            part.Size = Vector3.new(value, value, value)
-            print("Spike Part size updated to " .. tostring(part.Size))
-	    config.spikeHitbox = value
-	    saveConfig()
-        else
-            warn("Part not found in Spike hitbox!")
+for _, hb in ipairs(hitboxes) do
+    HitboxTab:CreateSlider({
+        Name = hb.Name,
+        Range = {1, 100},
+        Increment = 0.1,
+        CurrentValue = config[hb.Conf],
+        Callback = function(Value)
+            local asset = game:GetService("ReplicatedStorage").Assets.Hitboxes:FindFirstChild(hb.Path)
+            local part = asset and asset:FindFirstChild("Part")
+            if part and part:IsA("BasePart") then
+                part.Size = Vector3.new(Value, Value, Value)
+                config[hb.Conf] = Value
+                saveConfig()
+            end
         end
-    end
-})
+    })
+end
 
-Hitbox:CreateSlider({
-    Name = "Jump Set Hitbox Size",
-    Range = {1, 100},
-    Increment = 0.1,
-    CurrentValue = config.jumpsetHitbox,
-    Callback = function(value)
-        local jumpset = game:GetService("ReplicatedStorage").Assets.Hitboxes.JumpSet
-        local part = jumpset:FindFirstChild("Part")
-
-        if part and part:IsA("BasePart") then
-            part.Size = Vector3.new(value, value, value)
-            print("Jump Set Part size updated to " .. tostring(part.Size))
-	    config.jumpsetHitbox = value
-	    saveConfig()
-        else
-            warn("Part not found in Jump Set hitbox!")
-        end
-    end
-})
-
-Hitbox:CreateSlider({
-    Name = "Set Hitbox Size",
-    Range = {1, 100},
-    Increment = 0.1,
-    CurrentValue = config.setHitbox,
-    Callback = function(value)
-        local setHitbox = game:GetService("ReplicatedStorage").Assets.Hitboxes.Set
-        local part = setHitbox:FindFirstChild("Part")
-
-        if part and part:IsA("BasePart") then
-            part.Size = Vector3.new(value, value, value)
-            print("Set Part size updated to " .. tostring(part.Size))
-	    config.setHitbox = value
-	    saveConfig()
-        else
-            warn("Part not found in Set hitbox!")
-        end
-    end
-})
-
-Hitbox:CreateSlider({
-    Name = "Serve Hitbox Size",
-    Range = {1, 100},
-    Increment = 0.1,
-    CurrentValue = config.serveHitbox,
-    Callback = function(value)
-        local serveHitbox = game:GetService("ReplicatedStorage").Assets.Hitboxes.Serve
-        local part = serveHitbox:FindFirstChild("Part")
-
-        if part and part:IsA("BasePart") then
-            part.Size = Vector3.new(value, value, value)
-            print("Serve Part size updated to " .. tostring(part.Size))
-	    config.serveHitbox = value
-	    saveConfig()
-        else
-            warn("Part not found in Serve hitbox!")
-        end
-    end
-})
-
-Hitbox:CreateSlider({
-    Name = "Dive Hitbox Size",
-    Range = {1, 100},
-    Increment = 0.1,
-    CurrentValue = config.diveHitbox,
-    Callback = function(value)
-        local diveHitbox = game:GetService("ReplicatedStorage").Assets.Hitboxes.Dive
-        local part = diveHitbox:FindFirstChild("Part")
-
-        if part and part:IsA("BasePart") then
-            part.Size = Vector3.new(value, value, value)
-            print("Dive Part size updated to " .. tostring(part.Size))
-	    config.diveHitbox = value
-	    saveConfig()
-        else
-            warn("Part not found in Dive hitbox!")
-        end
-    end
-})
-
-Hitbox:CreateSlider({
-    Name = "Bump Hitbox Size",
-    Range = {1, 100},
-    Increment = 0.1,
-    CurrentValue = config.bumpHitbox,
-    Callback = function(value)
-        local bumpHitbox = game:GetService("ReplicatedStorage").Assets.Hitboxes.Bump
-        local part = bumpHitbox:FindFirstChild("Part")
-
-        if part and part:IsA("BasePart") then
-            part.Size = Vector3.new(value, value, value)
-            print("Bump Part size updated to " .. tostring(part.Size))
-	    config.bumpHitbox = value
-	    saveConfig()
-        else
-            warn("Part not found in Bump hitbox!")
-        end
-    end
-})
-
-Hitbox:CreateSlider({
-    Name = "Block Hitbox Size",
-    Range = {1, 100},
-    Increment = 0.1,
-    CurrentValue = config.blockHitbox,
-    Callback = function(value)
-        local blockHitbox = game:GetService("ReplicatedStorage").Assets.Hitboxes.Block
-        local part = blockHitbox:FindFirstChild("Part")
-
-        if part and part:IsA("BasePart") then
-            part.Size = Vector3.new(value, value, value)
-            print("Block Part size updated to " .. tostring(part.Size))
-	    config.blockHitbox = value
-	    saveConfig()
-	else
-            warn("Part not found in Block hitbox!")
-        end
-    end
-})
-
-local Spin = Window:CreateTab({
+local SpinTab = Window:CreateTab({
     Name = "Auto Spin",
-    Icon = "shopping_cart",
+    Icon = "cached",
     ImageSource = "Material",
     ShowTitle = true
 })
 
 local autoSpin = false
-local desiredStyles = {}
-
-local function showNotification(styleName)
-	Luna:Notification({
-		Title = "Style Obtained!",
-		Icon = "check_circle",
-		ImageSource = "Material",
-		Content = "You successfully obtained the style: " .. styleName,
-	})
-end
+local desiredStyles = {"Hinata"}
 
 local function startAutoSpin()
-	coroutine.wrap(function()
-		while autoSpin do
-			local currentStyle = player.PlayerGui.Interface.Lobby.Styles.TopPanel.DisplayName.Text
-			if table.find(desiredStyles, currentStyle) then
-				print("STOP! You got:", currentStyle)
-				autoSpin = false
-				showNotification(currentStyle)
-				break
-			else
-				game:GetService("ReplicatedStorage").Packages._Index["sleitnick_knit@1.7.0"].knit.Services.StylesService.RF.Roll:InvokeServer(false)
-				print("Spinning... Current result:", currentStyle)
-				task.wait(0.5)
-			end
-		end
-	end)()
+    coroutine.wrap(function()
+        while autoSpin do
+            local currentStyle = player.PlayerGui.Interface.Lobby.Styles.TopPanel.DisplayName.Text
+            if table.find(desiredStyles, currentStyle) then
+                autoSpin = false
+                Luna:Notification({
+                    Title = "Style Obtained!",
+                    Icon = "check_circle",
+                    Content = "You obtained: " .. currentStyle
+                })
+                break
+            else
+                game:GetService("ReplicatedStorage").Packages._Index["sleitnick_knit@1.7.0"].knit.Services.StylesService.RF.Roll:InvokeServer(false)
+                task.wait(0.5)
+            end
+        end
+    end)()
 end
 
-Spin:CreateToggle({
-	Name = "Auto Spin",
-	Description = nil,
-	CurrentValue = false,
-	Callback = function(Value)
-		autoSpin = Value
-		if autoSpin then
-			print("Auto Spin Enabled")
-			startAutoSpin()
-		else
-			print("Auto Spin Disabled")
-		end
-	end
+SpinTab:CreateToggle({
+    Name = "Auto Spin",
+    CurrentValue = false,
+    Callback = function(Value)
+        autoSpin = Value
+        if autoSpin then startAutoSpin() end
+    end
 })
 
-Spin:CreateDropdown({
-	Name = "Select Desired Style",
-	Description = "Choose your desired style",
-	Options = {"Oikawa", "Bokuto", "Kageyama", "Sawamura", "Ushijima", "Kozume", "Kuroo", "Yamamoto", "Azumane", "Yaku", "Hinata"},
-	CurrentOption = {"Hinata"},
-	MultipleOptions = true,
-	SpecialType = nil,
-	Callback = function(Option)
-		desiredStyles = Option
-		print("Selected Styles:", table.concat(desiredStyles, ", "))
-	end
+SpinTab:CreateDropdown({
+    Name = "Select Desired Style",
+    Options = {"Oikawa", "Bokuto", "Kageyama", "Sawamura", "Ushijima", "Kozume", "Kuroo", "Yamamoto", "Azumane", "Yaku", "Hinata"},
+    CurrentOption = {"Hinata"},
+    MultipleOptions = true,
+    Callback = function(Options)
+        desiredStyles = Options
+    end
 })
+
+local ThemeTab = Window:CreateTab({
+    Name = "Theme",
+    Icon = "palette",
+    ImageSource = "Material",
+    ShowTitle = true
+})
+ThemeTab:BuildThemeSection()
+
+local ConfigTab = Window:CreateTab({
+    Name = "Config",
+    Icon = "settings",
+    ImageSource = "Material",
+    ShowTitle = true
+})
+ConfigTab:BuildConfigSection()
+
+-- Global Loops
+task.spawn(function()
+    local roundOverStats = player.PlayerGui.Interface.RoundOverStats
+    local escPressed = false
+    while true do
+        if roundOverStats.Visible then
+            if not escPressed then
+                task.wait(5)
+                for i=1,2 do
+                    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Escape, false, game)
+                    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Escape, false, game)
+                    task.wait(i == 1 and 0.3 or 0.7)
+                end
+                escPressed = true
+            end
+        else
+            escPressed = false
+        end
+        task.wait(0.5)
+    end
+end)
+
+task.spawn(function()
+    while task.wait(0.3) do
+        if not isRunning then continue end
+        local ballPart = getBall()
+        local humanoid, humanoidRootPart = getCharacterData()
+        if ballPart and humanoid and humanoidRootPart then
+            humanoid:MoveTo(ballPart.Position)
+            if (ballPart.Position - humanoidRootPart.Position).Magnitude <= 15 then
+                local target = getRandomTargetPart()
+                if target then
+                    humanoidRootPart.CFrame = CFrame.new(humanoidRootPart.Position, Vector3.new(target.Position.X, humanoidRootPart.Position.Y, target.Position.Z))
+                end
+                if ballPart.Position.Y > humanoidRootPart.Position.Y + 5 then
+                    pressSpace()
+                    pressClick()
+                end
+            end
+        end
+    end
+end)
+
+game:GetService("UserInputService").InputBegan:Connect(function(input, gpe)
+    if not gpe and input.KeyCode == Enum.KeyCode.Z and powerfulServe then
+        game:GetService("ReplicatedStorage").Packages._Index["sleitnick_knit@1.7.0"].knit.Services.GameService.RF.Serve:InvokeServer(Vector3.new(0, 0, 0), math.huge)
+    end
+end)
+
+player.CharacterAdded:Connect(function()
+    if enablejoin then teamSelection() end
+end)
