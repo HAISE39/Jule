@@ -1,6 +1,6 @@
 -- memory.lua
--- Final Production Memory Library for Aurcus Online
--- Kode Jadi (No Placeholders)
+-- Memory Manipulation Library for AndLua+
+-- Targets [anon:dalvik-main space]
 
 require "import"
 import "java.io.RandomAccessFile"
@@ -8,13 +8,14 @@ import "java.lang.String"
 
 local memory = {}
 
--- Get Dalvik Main (Java Heap) range from maps
-function memory.getDalvikMain()
+-- Get the exact address range for [anon:dalvik-main space]
+function memory.getJavaHeapRange()
   local f = io.open("/proc/self/maps", "r")
   if not f then return nil end
   local start_addr, end_addr
   for line in f:lines() do
-    if line:find("dalvik%-main") then
+    -- Specifically target 'dalvik-main space' as per GG behavior
+    if line:find("dalvik%-main space") then
       local s, e = line:match("(%x+)%-(%x+)")
       if s then
         start_addr = tonumber(s, 16)
@@ -27,22 +28,27 @@ function memory.getDalvikMain()
   return start_addr, end_addr
 end
 
--- High performance memory search
+-- Fast memory search using RandomAccessFile and String conversion
 function memory.search(pattern, start_addr, end_addr)
-  local raf = RandomAccessFile("/proc/self/mem", "r")
-  local chunk_size = 1024 * 512 -- 512KB
-  local pattern_len = #pattern
+  local raf = nil
+  local success, err = pcall(function()
+    raf = RandomAccessFile("/proc/self/mem", "r")
+  end)
+  if not success or not raf then return nil end
 
+  local chunk_size = 1024 * 512 -- 512KB chunks
+  local pattern_len = #pattern
   local current = start_addr
+
   while current < end_addr do
-    local read_size = math.min(chunk_size + pattern_len, end_addr - current)
-    if read_size <= 0 then break end
+    local read_len = math.min(chunk_size + pattern_len, end_addr - current)
+    if read_len <= 0 then break end
 
     raf.seek(current)
-    local bytes = jarray(read_size, "byte")
+    local bytes = jarray(read_len, "byte")
     raf.readFully(bytes)
 
-    -- Convert to string for fast Lua searching
+    -- ISO-8859-1 keeps bytes as-is for binary searching
     local data = String(bytes, "ISO-8859-1").toString()
     local pos = data:find(pattern, 1, true)
 
@@ -53,16 +59,20 @@ function memory.search(pattern, start_addr, end_addr)
 
     current = current + chunk_size
   end
+
   raf.close()
   return nil
 end
 
--- Write 4-byte Dword to memory
+-- Write a 4-byte DWORD to memory (Little Endian)
 function memory.writeDword(address, value)
-  local raf = RandomAccessFile("/proc/self/mem", "rw")
-  raf.seek(address)
+  local raf = nil
+  local success, err = pcall(function()
+    raf = RandomAccessFile("/proc/self/mem", "rw")
+  end)
+  if not success or not raf then return false end
 
-  -- Little Endian 4-byte write
+  raf.seek(address)
   local b = jarray(4, "byte")
   b[0] = (value & 0xFF)
   b[1] = ((value >> 8) & 0xFF)

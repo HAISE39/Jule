@@ -1,7 +1,6 @@
 -- main.lua
 -- Injector for Aurcus Online
--- Package: com.asobimo.aurcusonline.wx
--- Non-Root Method: sharedUserId & shared process
+-- Targets: com.asobimo.aurcusonline.wx
 
 require "import"
 import "android.widget.*"
@@ -15,7 +14,7 @@ import "android.graphics.*"
 import "android.graphics.drawable.*"
 import "android.util.DisplayMetrics"
 
--- Import memory utility
+-- Import memory engine
 local memory = require("memory")
 
 -- Set UI Layout
@@ -25,68 +24,67 @@ local target_package = "com.asobimo.aurcusonline.wx"
 local wm = activity.getSystemService(Context.WINDOW_SERVICE)
 local dm = activity.getResources().getDisplayMetrics()
 
--- Mod Constants
+-- Mod Logic
+-- Pattern: FF FF FF FF 02 00 00 00 FF FF FF FF 00 00 00 00 00 00 00 00
 local MOD_PATTERN = "\xff\xff\xff\xff\x02\0\0\0\xff\xff\xff\xff\0\0\0\0\0\0\0\0"
-local VAL_BAG = 12
-local VAL_MARKET = 27
-local VAL_RESET = -1 -- Original value FF FF FF FF
+local VAL_TARGET = 12 -- Decimal
+local VAL_ORIGINAL = 2
 
 -- UI State
 local iconView = nil
 local menuView = nil
 local isMenuOpen = false
-local isUpdatingUI = false
 
--- Helper for safe background
-function setSafeBackground(view, color, radius, strokeColor)
+-- Helper for background
+function setSafeBackground(view, color, radius)
   local drawable = GradientDrawable()
   drawable.setShape(GradientDrawable.RECTANGLE)
   drawable.setCornerRadii({radius, radius, radius, radius, radius, radius, radius, radius})
   drawable.setColor(color)
-  if strokeColor then drawable.setStroke(3, strokeColor) end
   view.setBackgroundDrawable(drawable)
 end
 
--- Helper for UI thread updates
-function updateStatus(msg, color)
-  status_text.setText("Status: " .. msg)
-  if color then status_text.setTextColor(color) end
-end
-
--- Main Mod Engine (Background Thread)
-function applyMod(targetVal, featureName)
-  thread(function(val, name, pat)
+function runOpenBag(isChecked)
+  thread(function(checked)
     require "import"
     local memory = require("memory")
 
-    call("updateStatus", "Searching " .. name .. "...", 0xFF40C4FF)
+    call("updateStatus", "Searching...")
 
-    local s, e = memory.getDalvikMain()
-    if not s then
-      call("updateStatus", "Error: Range not found!", 0xFFF44336)
+    local start, stop = memory.getJavaHeapRange()
+    if not start then
+      call("updateStatus", "Error: Heap not found")
       return
     end
 
-    local addr = memory.search(pat, s, e)
+    local addr = memory.search(MOD_PATTERN, start, stop)
     if addr then
-      -- Per GG Script: Write to Offset 8 from start of pattern
-      if memory.writeDword(addr + 8, val) then
-        call("updateStatus", name .. " Applied!", 0xFF4CAF50)
+      -- User said: "edit pada offset addres 4 nya menjadi 12 type dword"
+      local target_addr = addr + 4
+      local value = checked and VAL_TARGET or VAL_ORIGINAL
+
+      if memory.writeDword(target_addr, value) then
+        call("updateStatus", checked and "Bag Open: ACTIVE" or "Bag Open: RESET")
       else
-        call("updateStatus", "Error: Write failed!", 0xFFF44336)
+        call("updateStatus", "Error: Write Failed")
       end
     else
-      call("updateStatus", "Error: Code not found!", 0xFFF44336)
+      call("updateStatus", "Error: Code Not Found")
     end
-  end, targetVal, featureName, MOD_PATTERN)
+  end, isChecked)
+end
+
+function updateStatus(msg)
+  status_text.setText("Status: " .. msg)
 end
 
 function showMenu()
   if menuView then return end
+
   local menuLayout = {
     LinearLayout,
     orientation="vertical",
-    layout_width="240dp",
+    layout_width="220dp",
     padding="1dp",
     {
       CardView,
@@ -111,20 +109,13 @@ function showMenu()
         {
           CheckBox,
           id="chk_bag",
-          text="Open Bag / Buka Tas",
+          text="Open Bag",
           textColor="#FFFFFF",
-        },
-        {
-          CheckBox,
-          id="chk_market",
-          text="Open Market / Buka Pasar",
-          textColor="#FFFFFF",
-          layout_marginTop="5dp",
         },
         {
           Button,
-          id="btn_hide_menu",
-          text="HIDE MENU / SEMBUNYIKAN",
+          id="btn_hide",
+          text="HIDE MENU",
           layout_marginTop="20dp",
           layout_width="fill",
         },
@@ -134,37 +125,17 @@ function showMenu()
 
   local ids = {}
   menuView = loadlayout(menuLayout, ids)
-  setSafeBackground(ids.btn_hide_menu, 0xFF333333, 10)
-  ids.btn_hide_menu.setTextColor(0xFFFFFFFF)
+  setSafeBackground(ids.btn_hide, 0xFF333333, 10)
+  ids.btn_hide.setTextColor(0xFFFFFFFF)
 
-  ids.btn_hide_menu.onClick = function()
+  ids.btn_hide.onClick = function()
     wm.removeView(menuView)
     menuView = nil
     isMenuOpen = false
   end
 
   ids.chk_bag.onCheckedChange = function(v, isChecked)
-    if isUpdatingUI then return end
-    if isChecked then
-      isUpdatingUI = true
-      ids.chk_market.setChecked(false)
-      isUpdatingUI = false
-      applyMod(VAL_BAG, "Open Bag")
-    else
-      applyMod(VAL_RESET, "Reset Bag")
-    end
-  end
-
-  ids.chk_market.onCheckedChange = function(v, isChecked)
-    if isUpdatingUI then return end
-    if isChecked then
-      isUpdatingUI = true
-      ids.chk_bag.setChecked(false)
-      isUpdatingUI = false
-      applyMod(VAL_MARKET, "Open Market")
-    else
-      applyMod(VAL_RESET, "Reset Market")
-    end
+    runOpenBag(isChecked)
   end
 
   local menuLP = WindowManager.LayoutParams()
@@ -189,7 +160,7 @@ function startInjector()
     iconView = ImageView(activity)
     iconView.setImageResource(android.R.drawable.ic_menu_compass)
     iconView.setPadding(10, 10, 10, 10)
-    setSafeBackground(iconView, 0xFF40C4FF, math.floor(27 * dm.density), 0xFFFFFFFF)
+    setSafeBackground(iconView, 0xFF40C4FF, math.floor(27 * dm.density))
 
     local iconLP = WindowManager.LayoutParams()
     iconLP.type = Build.VERSION.SDK_INT >= 26 and WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY or WindowManager.LayoutParams.TYPE_SYSTEM_ALERT
@@ -219,7 +190,7 @@ function startInjector()
     wm.addView(iconView, iconLP)
   end
 
-  updateStatus("Injector Ready / Injector Siap", 0xFF4CAF50)
+  updateStatus("Injector Active")
 
   local pm = activity.getPackageManager()
   local intent = pm.getLaunchIntentForPackage(target_package)
@@ -231,7 +202,7 @@ btn_start.onClick = startInjector
 btn_stop.onClick = function()
   if menuView then wm.removeView(menuView) menuView = nil isMenuOpen = false end
   if iconView then wm.removeView(iconView) iconView = nil end
-  updateStatus("Stopped / Berhenti", 0xFFF44336)
+  updateStatus("Stopped")
 end
 btn_game.onClick = function()
   local pm = activity.getPackageManager()
