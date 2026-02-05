@@ -8,6 +8,11 @@ import "java.lang.String"
 
 local memory = {}
 
+-- Helper to create byte arrays safely in any thread
+local function create_byte_array(size)
+  return luajava.createArray("byte", size)
+end
+
 -- Get the exact address range for [anon:dalvik-main space]
 function memory.getJavaHeapRange()
   local f = io.open("/proc/self/maps", "r")
@@ -45,7 +50,7 @@ function memory.search(pattern, start_addr, end_addr)
     if read_len <= 0 then break end
 
     raf.seek(current)
-    local bytes = jarray(read_len, "byte")
+    local bytes = create_byte_array(read_len)
     raf.readFully(bytes)
 
     -- ISO-8859-1 keeps bytes as-is for binary searching
@@ -73,7 +78,7 @@ function memory.writeDword(address, value)
   if not success or not raf then return false end
 
   raf.seek(address)
-  local b = jarray(4, "byte")
+  local b = create_byte_array(4)
   b[0] = (value & 0xFF)
   b[1] = ((value >> 8) & 0xFF)
   b[2] = ((value >> 16) & 0xFF)

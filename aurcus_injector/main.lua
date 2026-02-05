@@ -39,7 +39,6 @@ function setSafeBackground(view, color, radius)
 end
 
 function runInjectSword()
-  -- Move pattern and value inside or pass them to ensure they are available in the thread
   thread(function()
     require "import"
     local memory = require("memory")
@@ -48,44 +47,57 @@ function runInjectSword()
     local MOD_PATTERN = "\x03\0\0\0\x1e\0\0\0\x01\0\0\0\x02\0\0\0\x01\0\0\0"
     local VAL_TARGET = 99999
 
-    call("updateStatus", "Searching Pattern...")
-
-    local start, stop = memory.getJavaHeapRange()
-    if not start then
-      call("updateStatus", "Error: Java Heap Not Found")
-      return
+    local function notify(msg)
+      call("updateStatus", msg)
     end
 
-    local base_addr = memory.search(MOD_PATTERN, start, stop)
-    if base_addr then
-      -- Anchor is the address of value '30' which is base + 4
-      local anchor = base_addr + 4
+    local ok, err = pcall(function()
+      notify("Searching Pattern...")
 
-      -- Edit offsets 24, 28, 32, 36 from anchor
-      local offsets = {24, 28, 32, 36}
-      local success_count = 0
+      local start, stop = memory.getJavaHeapRange()
+      if not start then
+        notify("Error: Java Heap Not Found")
+        return
+      end
 
-      for _, offset in ipairs(offsets) do
-        if memory.writeDword(anchor + offset, VAL_TARGET) then
-          success_count = success_count + 1
+      local base_addr = memory.search(MOD_PATTERN, start, stop)
+      if base_addr then
+        -- Anchor is the address of value '30' which is base + 4
+        local anchor = base_addr + 4
+
+        -- Edit offsets 24, 28, 32, 36 from anchor
+        local offsets = {24, 28, 32, 36}
+        local success_count = 0
+
+        for _, offset in ipairs(offsets) do
+          if memory.writeDword(anchor + offset, VAL_TARGET) then
+            success_count = success_count + 1
+          end
         end
-      end
 
-      if success_count == #offsets then
-        call("updateStatus", "Sword Inject: SUCCESS")
-        print("Sword Injected Successfully! / Pedang Berhasil Diinjek!")
+        if success_count == #offsets then
+          notify("Sword Inject: SUCCESS")
+          print("Sword Injected Successfully! / Pedang Berhasil Diinjek!")
+        else
+          notify("Error: Partial Write ("..success_count..")")
+        end
       else
-        call("updateStatus", "Error: Partial Write ("..success_count..")")
+        notify("Error: Pattern Not Found")
+        print("Sword Pattern Not Found! / Pola Pedang Tidak Ditemukan!")
       end
-    else
-      call("updateStatus", "Error: Pattern Not Found")
-      print("Sword Pattern Not Found! / Pola Pedang Tidak Ditemukan!")
+    end)
+
+    if not ok then
+      notify("Runtime Error")
+      print("Thread Error: " .. tostring(err))
     end
   end)
 end
 
 function updateStatus(msg)
-  status_text.setText("Status: " .. msg)
+  if status_text then
+    status_text.setText("Status: " .. msg)
+  end
 end
 
 function showMenu()
