@@ -6,6 +6,7 @@ require "import"
 import "android.widget.*"
 import "android.view.*"
 import "android.graphics.*"
+import "android.graphics.drawable.*"
 import "android.content.*"
 import "android.os.*"
 import "android.util.DisplayMetrics"
@@ -41,7 +42,12 @@ lp.y = 100
 -- Floating Icon (The small button) / Ikon Melayang (Tombol kecil)
 local icon = ImageView(service)
 icon.setImageResource(android.R.drawable.ic_menu_compass)
-icon.setBackgroundColor(0xFFFF0000) -- Bright Red for visibility / Merah Terang agar terlihat
+
+-- Safe programmatic background / Latar belakang terprogram yang aman
+local iconBG = GradientDrawable()
+iconBG.setColor(0xFFFF0000) -- Red / Merah
+iconBG.setCornerRadius(math.floor(27 * dm.density))
+icon.setBackgroundDrawable(iconBG)
 icon.setPadding(10, 10, 10, 10)
 
 -- Draggable Logic / Logika Seret
@@ -74,12 +80,13 @@ local menuView = nil
 function showMenu()
   if menuView then return end -- Prevent multiple menus / Cegah menu ganda
 
+  -- Simple Layout without dangerous attributes
   local menuLayout = {
     LinearLayout,
     orientation="vertical",
     layout_width="220dp",
-    backgroundColor="#EE222222",
     padding="15dp",
+    id="menu_main",
     {
       TextView,
       text="AURCUS MOD MENU",
@@ -104,18 +111,13 @@ function showMenu()
       Button,
       text="HIDE / SEMBUNYIKAN",
       layout_marginTop="10dp",
-      onClick=function()
-        wm.removeView(menuView)
-        menuView = nil
-      end
+      id="btn_hide",
     },
     {
       Button,
       text="EXIT INJECTOR / KELUAR",
       layout_marginTop="5dp",
-      onClick=function()
-        service.stopSelf()
-      end
+      id="btn_exit",
     }
   }
 
@@ -127,16 +129,36 @@ function showMenu()
   menuLP.height = WindowManager.LayoutParams.WRAP_CONTENT
   menuLP.gravity = Gravity.CENTER
 
-  menuView = loadlayout(menuLayout)
+  -- Load layout safely
+  local ids = {}
+  menuView = loadlayout(menuLayout, ids)
+
+  -- Set background programmatically to avoid loadlayout errors
+  -- Atur latar belakang secara terprogram untuk menghindari kesalahan loadlayout
+  local menuBG = GradientDrawable()
+  menuBG.setColor(0xEE222222)
+  menuBG.setCornerRadius(20)
+  menuBG.setStroke(3, 0xFFFFFFFF) -- White border / Pinggiran putih
+  ids.menu_main.setBackgroundDrawable(menuBG)
+
   wm.addView(menuView, menuLP)
 
+  -- Button Listeners
+  ids.btn_hide.onClick = function()
+    wm.removeView(menuView)
+    menuView = nil
+  end
+
+  ids.btn_exit.onClick = function()
+    service.stopSelf()
+  end
+
   -- CheckBox Events / Kejadian Kotak Centang
-  chk_godmode.onCheckedChange = function(v, isChecked)
+  ids.chk_godmode.onCheckedChange = function(v, isChecked)
     if isChecked then
       local start_addr, end_addr = memory.getDalvikMain()
       if start_addr then
         print("God Mode ON - Dalvik: " .. string.format("%X", start_addr))
-        -- memory.write(start_addr + 0x123, "00 00 A0 E3", "hex") -- Placeholder
       else
         print("Dalvik range not found! / Rentang Dalvik tidak ditemukan!")
         v.setChecked(false)
@@ -146,7 +168,7 @@ function showMenu()
     end
   end
 
-  chk_onehit.onCheckedChange = function(v, isChecked)
+  ids.chk_onehit.onCheckedChange = function(v, isChecked)
     if isChecked then
        print("One Hit Kill ON")
     else
@@ -157,6 +179,6 @@ end
 
 -- Cleanup when service stops / Pembersihan saat layanan berhenti
 function onDestroy()
-  if icon then wm.removeView(icon) end
-  if menuView then wm.removeView(menuView) end
+  if icon then pcall(function() wm.removeView(icon) end) end
+  if menuView then pcall(function() wm.removeView(menuView) end) end
 end

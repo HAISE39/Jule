@@ -46,13 +46,10 @@ btn_start.onClick = function()
     if f then
       f:close()
       local ok, err = pcall(function()
-        local intent = Intent()
-        -- Try both common package names for LuaService
-        -- Coba kedua nama paket umum untuk LuaService
-        local serviceName = "com.androlua.LuaService"
-        intent.setClassName(activity.getPackageName(), serviceName)
-        intent.putExtra("luaPath", luaPath)
-        activity.startService(intent)
+        local serviceIntent = Intent()
+        serviceIntent.setClassName(activity.getPackageName(), "com.androlua.LuaService")
+        serviceIntent.putExtra("luaPath", luaPath)
+        activity.startService(serviceIntent)
       end)
 
       if ok then
