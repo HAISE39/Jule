@@ -11,6 +11,7 @@ This is a full source code for an injector and mod menu for the game **Aurcus On
 ## Requirements
 To make this injector work without root:
 1. Both the Injector app and the Game app must have the same `android:sharedUserId` in their `AndroidManifest.xml`.
+   - Use: `android:sharedUserId="xx.yy.zz"`
 2. Both apps must be signed with the same certificate.
 3. For best results, they should share the same process by adding `android:process=":shared"` (or similar) to their `<application>` tag.
 4. The Injector requires "Display over other apps" (Overlay) permission.
@@ -36,6 +37,7 @@ Ini adalah kode sumber lengkap untuk injector dan menu mod game **Aurcus Online*
 ## Persyaratan
 Untuk membuat injector ini berfungsi tanpa root:
 1. Aplikasi Injector dan aplikasi Game harus memiliki `android:sharedUserId` yang sama di `AndroidManifest.xml` mereka.
+   - Gunakan: `android:sharedUserId="xx.yy.zz"`
 2. Kedua aplikasi harus ditandatangani dengan sertifikat (signature) yang sama.
 3. Untuk hasil terbaik, mereka harus berbagi proses yang sama dengan menambahkan `android:process=":shared"` (atau serupa) ke tag `<application>` mereka.
 4. Injector memerlukan izin "Tampilkan di atas aplikasi lain" (Overlay).
