@@ -41,10 +41,19 @@ btn_start.onClick = function()
     activity.startActivity(intent)
 
     -- Start Floating Mod Menu Service / Mulai Layanan Menu Mod Melayang
-    -- In AndLua+, use service() to start a lua file as a service
-    service("float")
+    -- We use a more robust way to start the service using the class name
+    local ok, err = pcall(function()
+      local intent = Intent()
+      intent.setClassName(activity.getPackageName(), "com.androlua.LuaService")
+      intent.putExtra("luaPath", activity.getLuaPath("float.lua"))
+      activity.startService(intent)
+    end)
 
-    print("Game started! Mod Menu is active. / Game dimulai! Menu Mod aktif.")
+    if ok then
+      print("Game started! Mod Menu is active. / Game dimulai! Menu Mod aktif.")
+    else
+      print("Failed to start Mod Menu: " .. tostring(err))
+    end
     -- Optional: Minimize the injector app / Opsional: Minimalkan aplikasi injector
     activity.moveTaskToBack(true)
   else
