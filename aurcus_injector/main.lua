@@ -4,7 +4,7 @@ import "android.view.*"
 import "android.graphics.drawable.*"
 import "android.content.*"
 
--- UI Layout (Restored to Turn 5 Style)
+-- UI Layout (Gaya Feb 5 23:31)
 local layout = {
   LinearLayout,
   orientation="vertical",
@@ -67,57 +67,57 @@ mainView.onTouch = function(v, e)
   return true
 end
 
--- Inject Logic (Refinement Search)
-local function runInjectSword()
+-- Inject Logic v1 (Original Pattern)
+local function runInjectV1()
   thread(function()
     local memory = require("memory")
-    call(function() statusText.setText("Status: Searching 80.0...") end)
-
-    -- 1. Search 80.0 (Float)
-    if not memory.search("80.0", "Float") then
-      call(function() statusText.setText("Status: 80.0 Not Found!") end)
+    call(function() statusText.setText("Status: V1 Searching...") end)
+    local results = memory.search("3;30;1;2;1", "Dword")
+    if #results == 0 then
+      call(function() statusText.setText("Status: V1 Not Found") end)
       return
     end
-
-    local count = memory.getResultsCount()
-    call(function() statusText.setText("Status: Found " .. count .. ". Refining (72.0)...") end)
-
-    -- 2. Verify 72.0 at offset 192
-    if not memory.offset("72.0", 192, "Float") then
-      call(function() statusText.setText("Status: 72.0 Offset Fail!") end)
-      return
-    end
-
-    -- 3. Verify 2.0 at offset 196
-    if not memory.offset("2.0", 196, "Float") then
-      call(function() statusText.setText("Status: 2.0 Offset Fail!") end)
-      return
-    end
-
-    count = memory.getResultsCount()
-    call(function() statusText.setText("Status: Found " .. count .. ". Writing...") end)
-
-    -- 4. Write 100000.0 at offsets 0 and 192
-    memory.write("100000.0", 0, "Float")
-    memory.write("100000.0", 192, "Float")
-
-    call(function()
-      statusText.setText("Status: Injected Successfully!")
-      Toast.makeText(activity, "Sword Injected!", Toast.LENGTH_SHORT).show()
-    end)
+    memory.writeBatch(results, "99999", 24, "Dword")
+    memory.writeBatch(results, "99999", 28, "Dword")
+    memory.writeBatch(results, "99999", 32, "Dword")
+    memory.writeBatch(results, "99999", 36, "Dword")
+    call(function() statusText.setText("Status: V1 Success ("..#results..")") end)
   end)
 end
 
--- Menu Setup
-local menuItems = {"START AURCUS ONLINE", "INJECT SWORD", "EXIT MOD"}
+-- Inject Logic v2 (Float Refinement)
+local function runInjectV2()
+  thread(function()
+    local memory = require("memory")
+    call(function() statusText.setText("Status: V2 Searching...") end)
+    local results = memory.search("80.0", "Float")
+    if #results == 0 then
+      call(function() statusText.setText("Status: V2 80.0 Not Found") end)
+      return
+    end
+    results = memory.refine(results, "72.0", 192, "Float")
+    results = memory.refine(results, "2.0", 196, "Float")
+    if #results == 0 then
+      call(function() statusText.setText("Status: V2 Verify Fail") end)
+      return
+    end
+    memory.writeBatch(results, "100000.0", 0, "Float")
+    memory.writeBatch(results, "100000.0", 192, "Float")
+    call(function() statusText.setText("Status: V2 Success ("..#results..")") end)
+  end)
+end
+
+-- Menu Items
+local menuItems = {"START AURCUS ONLINE", "INJECT SWORD (v1 - Pattern)", "INJECT SWORD (v2 - Float)", "EXIT MOD"}
 local adapter = ArrayAdapter(activity, android.R.layout.simple_list_item_1, menuItems)
 menuList.setAdapter(adapter)
 
--- ListView Background handling (ensure text is visible)
 menuList.onItemClick = function(l, v, p, i)
   local cmd = menuItems[p+1]
-  if cmd == "INJECT SWORD" then
-    runInjectSword()
+  if cmd == "INJECT SWORD (v1 - Pattern)" then
+    runInjectV1()
+  elseif cmd == "INJECT SWORD (v2 - Float)" then
+    runInjectV2()
   elseif cmd == "START AURCUS ONLINE" then
     local intent = activity.getPackageManager().getLaunchIntentForPackage("com.asobimo.aurcusonline.wx")
     if intent then
