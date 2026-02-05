@@ -41,18 +41,27 @@ btn_start.onClick = function()
     activity.startActivity(intent)
 
     -- Start Floating Mod Menu Service / Mulai Layanan Menu Mod Melayang
-    -- We use a more robust way to start the service using the class name
-    local ok, err = pcall(function()
-      local intent = Intent()
-      intent.setClassName(activity.getPackageName(), "com.androlua.LuaService")
-      intent.putExtra("luaPath", activity.getLuaPath("float.lua"))
-      activity.startService(intent)
-    end)
+    local luaPath = activity.getLuaPath("float.lua")
+    local f = io.open(luaPath, "r")
+    if f then
+      f:close()
+      local ok, err = pcall(function()
+        local intent = Intent()
+        -- Try both common package names for LuaService
+        -- Coba kedua nama paket umum untuk LuaService
+        local serviceName = "com.androlua.LuaService"
+        intent.setClassName(activity.getPackageName(), serviceName)
+        intent.putExtra("luaPath", luaPath)
+        activity.startService(intent)
+      end)
 
-    if ok then
-      print("Game started! Mod Menu is active. / Game dimulai! Menu Mod aktif.")
+      if ok then
+        print("Game started! Starting Mod Menu... / Game dimulai! Memulai Menu Mod...")
+      else
+        print("Failed to start service: " .. tostring(err))
+      end
     else
-      print("Failed to start Mod Menu: " .. tostring(err))
+      print("Error: float.lua not found at " .. luaPath)
     end
     -- Optional: Minimize the injector app / Opsional: Minimalkan aplikasi injector
     activity.moveTaskToBack(true)

@@ -8,6 +8,10 @@ import "android.view.*"
 import "android.graphics.*"
 import "android.content.*"
 import "android.os.*"
+import "android.util.DisplayMetrics"
+
+-- Debug Toast / Toast Debug
+Toast.makeText(service, "Float Service Started", Toast.LENGTH_SHORT).show()
 
 -- Import our memory utility / Impor alat bantu memori kami
 local memory = require("memory")
@@ -22,10 +26,14 @@ else
   lp.type = WindowManager.LayoutParams.TYPE_PHONE
 end
 
+-- Fixed size for better visibility / Ukuran tetap agar lebih terlihat
+local dm = service.getResources().getDisplayMetrics()
+local iconSize = math.floor(54 * dm.density)
+
 lp.format = PixelFormat.RGBA_8888
 lp.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-lp.width = WindowManager.LayoutParams.WRAP_CONTENT
-lp.height = WindowManager.LayoutParams.WRAP_CONTENT
+lp.width = iconSize
+lp.height = iconSize
 lp.gravity = Gravity.LEFT | Gravity.TOP
 lp.x = 100
 lp.y = 100
@@ -33,7 +41,7 @@ lp.y = 100
 -- Floating Icon (The small button) / Ikon Melayang (Tombol kecil)
 local icon = ImageView(service)
 icon.setImageResource(android.R.drawable.ic_menu_compass)
-icon.setBackgroundColor(0x88000000)
+icon.setBackgroundColor(0xFFFF0000) -- Bright Red for visibility / Merah Terang agar terlihat
 icon.setPadding(10, 10, 10, 10)
 
 -- Draggable Logic / Logika Seret
