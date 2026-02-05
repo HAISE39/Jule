@@ -10,7 +10,8 @@ local memory = {}
 
 -- Helper to create byte arrays safely in any thread
 local function create_byte_array(size)
-  return luajava.createArray("byte", size)
+  -- In AndLua+, createArray expects a table for dimensions as the second argument
+  return luajava.createArray("byte", {size})
 end
 
 -- Get the exact address range for [anon:dalvik-main space]
