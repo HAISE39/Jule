@@ -7,6 +7,9 @@ import "android.widget.*"
 import "android.view.*"
 import "android.content.*"
 import "android.app.*"
+import "android.net.Uri"
+import "android.provider.Settings"
+import "android.os.Build"
 
 -- Set UI Layout / Atur Tata Letak UI
 activity.setContentView(loadlayout("layout"))
@@ -15,6 +18,18 @@ local target_package = "com.asobimo.aurcusonline.wx"
 
 -- START Button Click Event / Kejadian Klik Tombol START
 btn_start.onClick = function()
+  -- Check Overlay Permission (Required for Mod Menu)
+  -- Periksa Izin Hamparan (Diperlukan untuk Menu Mod)
+  if Build.VERSION.SDK_INT >= 23 then
+    if not Settings.canDrawOverlays(activity) then
+      print("Please allow 'Display over other apps' / Mohon izinkan 'Tampilkan di atas aplikasi lain'")
+      local intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+      intent.setData(Uri.parse("package:" .. activity.getPackageName()))
+      activity.startActivity(intent)
+      return
+    end
+  end
+
   -- Check if the game is installed / Periksa apakah game sudah terinstal
   local pm = activity.getPackageManager()
   local info = nil
@@ -26,11 +41,8 @@ btn_start.onClick = function()
     activity.startActivity(intent)
 
     -- Start Floating Mod Menu Service / Mulai Layanan Menu Mod Melayang
-    -- We use LuaService to run float.lua in the background
-    -- Kita menggunakan LuaService untuk menjalankan float.lua di latar belakang
-    local serviceIntent = Intent(activity, LuaService.class)
-    serviceIntent.putExtra("luaPath", activity.getLuaPath("float.lua"))
-    activity.startService(serviceIntent)
+    -- In AndLua+, use service() to start a lua file as a service
+    service("float")
 
     print("Game started! Mod Menu is active. / Game dimulai! Menu Mod aktif.")
     -- Optional: Minimize the injector app / Opsional: Minimalkan aplikasi injector
