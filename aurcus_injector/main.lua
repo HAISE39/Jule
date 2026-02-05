@@ -1,6 +1,6 @@
 -- main.lua
 -- Injector for Aurcus Online
--- Inspired by HAISE39/andl style
+-- Package: com.asobimo.aurcusonline.wx
 
 require "import"
 import "android.widget.*"
@@ -24,107 +24,85 @@ local target_package = "com.asobimo.aurcusonline.wx"
 local wm = activity.getSystemService(Context.WINDOW_SERVICE)
 local dm = activity.getResources().getDisplayMetrics()
 
--- Floating Views State
+-- Mod Constants
+local VAL_BAG = 12
+local VAL_MARKET = 27
+local VAL_ORIGINAL = 0xFFFFFFFF
+
+-- UI State
 local iconView = nil
 local menuView = nil
 local isMenuOpen = false
-local isInjectorActive = false
+local isUpdatingUI = false
 
--- Layout Parameters for Floating Icon
-local iconLP = WindowManager.LayoutParams()
-if Build.VERSION.SDK_INT >= 26 then
-  iconLP.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-else
-  iconLP.type = WindowManager.LayoutParams.TYPE_SYSTEM_ALERT
-end
-iconLP.format = PixelFormat.RGBA_8888
-iconLP.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-iconLP.width = math.floor(54 * dm.density)
-iconLP.height = math.floor(54 * dm.density)
-iconLP.gravity = Gravity.LEFT | Gravity.TOP
-iconLP.x = 100
-iconLP.y = 300
-
--- Layout Parameters for Main Menu
-local menuLP = WindowManager.LayoutParams()
-menuLP.type = iconLP.type
-menuLP.format = PixelFormat.RGBA_8888
-menuLP.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
-menuLP.width = WindowManager.LayoutParams.WRAP_CONTENT
-menuLP.height = WindowManager.LayoutParams.WRAP_CONTENT
-menuLP.gravity = Gravity.CENTER
-
--- Helper function to set background programmatically
+-- Helper for safe background
 function setSafeBackground(view, color, radius, strokeColor)
   local drawable = GradientDrawable()
   drawable.setShape(GradientDrawable.RECTANGLE)
   drawable.setCornerRadii({radius, radius, radius, radius, radius, radius, radius, radius})
   drawable.setColor(color)
-  if strokeColor then
-    drawable.setStroke(3, strokeColor)
-  end
+  if strokeColor then drawable.setStroke(3, strokeColor) end
   view.setBackgroundDrawable(drawable)
 end
 
-function checkPermission()
-  if Build.VERSION.SDK_INT >= 23 then
-    if not Settings.canDrawOverlays(activity) then
-      print("Please allow Overlay Permission / Mohon izinkan Izin Hamparan")
-      local intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
-      intent.setData(Uri.parse("package:" .. activity.getPackageName()))
-      activity.startActivity(intent)
-      return false
-    end
-  end
-  return true
+-- Helper for safe checkbox updates
+function setCheckedSafe(cb, checked)
+  isUpdatingUI = true
+  cb.setChecked(checked)
+  isUpdatingUI = false
 end
 
-function initFloatingIcon()
-  if iconView then return end
-
-  iconView = ImageView(activity)
-  iconView.setImageResource(android.R.drawable.ic_menu_compass)
-  iconView.setPadding(10, 10, 10, 10)
-  setSafeBackground(iconView, 0xFF40C4FF, math.floor(27 * dm.density), 0xFFFFFFFF)
-
-  -- Draggable Logic for Icon
-  local lastX, lastY, startX, startY
-  iconView.onTouch = function(v, event)
-    local action = event.getAction()
-    if action == MotionEvent.ACTION_DOWN then
-      startX = event.getRawX()
-      startY = event.getRawY()
-      lastX = iconLP.x
-      lastY = iconLP.y
-    elseif action == MotionEvent.ACTION_MOVE then
-      iconLP.x = lastX + (event.getRawX() - startX)
-      iconLP.y = lastY + (event.getRawY() - startY)
-      wm.updateViewLayout(iconView, iconLP)
-    elseif action == MotionEvent.ACTION_UP then
-      if math.abs(event.getRawX() - startX) < 10 and math.abs(event.getRawY() - startY) < 10 then
-        toggleMenu()
-      end
-    end
-    return true
-  end
-
-  wm.addView(iconView, iconLP)
-  Toast.makeText(activity, "Mod Menu Active / Menu Mod Aktif", Toast.LENGTH_SHORT).show()
+-- UI Update Callbacks (Called from thread)
+function updateStatus(msg)
+  status_text.setText("Status: " .. msg)
 end
 
-function toggleMenu()
-  if isMenuOpen then
-    if menuView then wm.removeView(menuView) end
-    menuView = nil
-    isMenuOpen = false
+function onModResult(msg, success)
+  print(msg)
+  if success then
+    status_text.setText("Status: Active / Aktif")
+    status_text.setTextColor(0xFF40C4FF)
   else
-    showMenu()
+    status_text.setText("Status: Failed / Gagal")
+    status_text.setTextColor(0xFFF44336)
   end
+end
+
+-- Main Mod Logic (Runs in background thread)
+function runMod(targetVal, featureName)
+  thread(function(val, name)
+    require "import"
+    local memory = require("memory")
+
+    -- Pattern: FF FF FF FF 02 00 00 00 [GAP: FF FF FF FF] 00 00 00 00 00 00 00 00
+    local prefix = "\xff\xff\xff\xff\x02\0\0\0"
+    local suffix = "\0\0\0\0\0\0\0\0"
+
+    call("updateStatus", "Searching " .. name .. "...")
+
+    local start, stop = memory.getDalvikMain()
+    if not start then
+      call("onModResult", "Dalvik range not found!", false)
+      return
+    end
+
+    -- Search for the pattern in Java Heap
+    local addr = memory.searchPattern(prefix, suffix, 4, start, stop)
+    if addr then
+      -- Target is offset 8 from start of pattern (the second FF FF FF FF block)
+      if memory.writeDword(addr + 8, val) then
+        call("onModResult", name .. " applied!", true)
+      else
+        call("onModResult", "Failed to write memory!", false)
+      end
+    else
+      call("onModResult", "Code not found! / Kode tidak ditemukan!", false)
+    end
+  end, targetVal, featureName)
 end
 
 function showMenu()
   if menuView then return end
-
   local menuLayout = {
     LinearLayout,
     orientation="vertical",
@@ -152,38 +130,27 @@ function showMenu()
           layout_marginBottom="10dp",
         },
         {
-          ScrollView,
+          LinearLayout,
+          orientation="vertical",
           layout_width="fill",
-          layout_height="200dp",
           {
-            LinearLayout,
-            orientation="vertical",
-            layout_width="fill",
-            {
-              CheckBox,
-              id="chk_godmode",
-              text="God Mode",
-              textColor="#FFFFFF",
-            },
-            {
-              CheckBox,
-              id="chk_onehit",
-              text="One Hit Kill",
-              textColor="#FFFFFF",
-            },
-            {
-              CheckBox,
-              id="chk_speed",
-              text="Speed Hack",
-              textColor="#FFFFFF",
-            },
-          }
+            CheckBox,
+            id="chk_bag",
+            text="Open Bag / Buka Tas",
+            textColor="#FFFFFF",
+          },
+          {
+            CheckBox,
+            id="chk_market",
+            text="Open Market / Buka Pasar",
+            textColor="#FFFFFF",
+          },
         },
         {
           Button,
           id="btn_hide_menu",
           text="HIDE MENU / SEMBUNYIKAN",
-          layout_marginTop="10dp",
+          layout_marginTop="15dp",
           layout_width="fill",
         },
       }
@@ -192,83 +159,108 @@ function showMenu()
 
   local ids = {}
   menuView = loadlayout(menuLayout, ids)
-
-  -- Apply styles
   setSafeBackground(ids.btn_hide_menu, 0xFF333333, 10)
   ids.btn_hide_menu.setTextColor(0xFFFFFFFF)
 
-  -- Listeners
   ids.btn_hide_menu.onClick = function()
-    toggleMenu()
+    wm.removeView(menuView)
+    menuView = nil
+    isMenuOpen = false
   end
 
-  ids.chk_godmode.onCheckedChange = function(v, isChecked)
+  ids.chk_bag.onCheckedChange = function(v, isChecked)
     if isChecked then
-      local start, _ = memory.getDalvikMain()
-      if start then
-        print("God Mode Active @ " .. string.format("%X", start))
-      else
-        print("Dalvik range not found! / Rentang Dalvik tidak ditemukan!")
-        v.setChecked(false)
-      end
+      setCheckedSafe(ids.chk_market, false)
+      runMod(VAL_BAG, "Open Bag")
+    else
+      if not isUpdatingUI then runMod(VAL_ORIGINAL, "Revert Bag") end
     end
   end
 
+  ids.chk_market.onCheckedChange = function(v, isChecked)
+    if isChecked then
+      setCheckedSafe(ids.chk_bag, false)
+      runMod(VAL_MARKET, "Open Market")
+    else
+      if not isUpdatingUI then runMod(VAL_ORIGINAL, "Revert Market") end
+    end
+  end
+
+  local menuLP = WindowManager.LayoutParams()
+  menuLP.type = Build.VERSION.SDK_INT >= 26 and WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY or WindowManager.LayoutParams.TYPE_SYSTEM_ALERT
+  menuLP.format = PixelFormat.RGBA_8888
+  menuLP.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+  menuLP.width = WindowManager.LayoutParams.WRAP_CONTENT
+  menuLP.height = WindowManager.LayoutParams.WRAP_CONTENT
+  menuLP.gravity = Gravity.CENTER
   wm.addView(menuView, menuLP)
   isMenuOpen = true
 end
 
 function startInjector()
-  if not checkPermission() then return end
+  if Build.VERSION.SDK_INT >= 23 and not Settings.canDrawOverlays(activity) then
+    local intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" .. activity.getPackageName()))
+    activity.startActivity(intent)
+    return
+  end
 
-  initFloatingIcon()
-  isInjectorActive = true
+  if not iconView then
+    iconView = ImageView(activity)
+    iconView.setImageResource(android.R.drawable.ic_menu_compass)
+    iconView.setPadding(10, 10, 10, 10)
+    setSafeBackground(iconView, 0xFF40C4FF, math.floor(27 * dm.density), 0xFFFFFFFF)
+
+    local iconLP = WindowManager.LayoutParams()
+    iconLP.type = Build.VERSION.SDK_INT >= 26 and WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY or WindowManager.LayoutParams.TYPE_SYSTEM_ALERT
+    iconLP.format = PixelFormat.RGBA_8888
+    iconLP.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+    iconLP.width = math.floor(54 * dm.density)
+    iconLP.height = math.floor(54 * dm.density)
+    iconLP.gravity = Gravity.LEFT | Gravity.TOP
+    iconLP.x, iconLP.y = 100, 300
+
+    local lastX, lastY, startX, startY
+    iconView.onTouch = function(v, event)
+      local action = event.getAction()
+      if action == MotionEvent.ACTION_DOWN then
+        startX, startY = event.getRawX(), event.getRawY()
+        lastX, lastY = iconLP.x, iconLP.y
+      elseif action == MotionEvent.ACTION_MOVE then
+        iconLP.x, iconLP.y = lastX + (event.getRawX() - startX), lastY + (event.getRawY() - startY)
+        wm.updateViewLayout(iconView, iconLP)
+      elseif action == MotionEvent.ACTION_UP then
+        if math.abs(event.getRawX() - startX) < 10 then
+          if isMenuOpen then wm.removeView(menuView) menuView = nil isMenuOpen = false else showMenu() end
+        end
+      end
+      return true
+    end
+    wm.addView(iconView, iconLP)
+  end
+
   status_text.setText("Status: Active / Aktif")
   status_text.setTextColor(0xFF40C4FF)
 
-  -- Auto Launch Game
-  launchGame()
-
-  -- Minimize injector
+  local pm = activity.getPackageManager()
+  local intent = pm.getLaunchIntentForPackage(target_package)
+  if intent then activity.startActivity(intent) end
   activity.moveTaskToBack(true)
 end
 
-function stopInjector()
-  if isMenuOpen and menuView then
-    wm.removeView(menuView)
-    menuView = nil
-    isMenuOpen = false
-  end
-  if iconView then
-    wm.removeView(iconView)
-    iconView = nil
-  end
-  isInjectorActive = false
+btn_start.onClick = startInjector
+btn_stop.onClick = function()
+  if menuView then wm.removeView(menuView) menuView = nil isMenuOpen = false end
+  if iconView then wm.removeView(iconView) iconView = nil end
   status_text.setText("Status: Stopped / Berhenti")
   status_text.setTextColor(0xFFF44336)
-  print("Injector Stopped / Injector Berhenti")
 end
-
-function launchGame()
+btn_game.onClick = function()
   local pm = activity.getPackageManager()
   local intent = pm.getLaunchIntentForPackage(target_package)
-  if intent then
-    activity.startActivity(intent)
-  else
-    print("Game not installed! / Game tidak terinstal!")
-  end
+  if intent then activity.startActivity(intent) else print("Game not installed!") end
 end
-
--- Button Click Events
-btn_start.onClick = startInjector
-btn_stop.onClick = stopInjector
-btn_game.onClick = launchGame
 btn_exit.onClick = function()
-  stopInjector()
+  if iconView then wm.removeView(iconView) end
   activity.finish()
 end
-
--- Cleanup on activity destroy
-function onDestroy()
-  stopInjector()
-end
+function onDestroy() if iconView then wm.removeView(iconView) end end

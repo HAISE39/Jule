@@ -5,19 +5,13 @@
 local memory = {}
 
 -- Function to get Dalvik Main memory range
--- Fungsi untuk mendapatkan rentang memori Dalvik Main
 function memory.getDalvikMain()
-  -- Using /proc/self/maps assuming we are in the same process or have access
-  -- Menggunakan /proc/self/maps dengan asumsi kita berada di proses yang sama atau memiliki akses
   local maps = io.open("/proc/self/maps", "r")
-  if not maps then
-    return nil
-  end
+  if not maps then return nil end
 
   local start_addr, end_addr
   for line in maps:lines() do
     -- Search for [anon:dalvik-main] which is the Java Heap
-    -- Cari [anon:dalvik-main] yang merupakan Java Heap
     if line:find("%[anon:dalvik%-main%]") then
       start_addr, end_addr = line:match("(%x+)%-(%x+)")
       break
@@ -31,29 +25,72 @@ function memory.getDalvikMain()
   return nil
 end
 
--- Function to write value to memory (Placeholder)
--- Fungsi untuk menulis nilai ke memori (Contoh)
-function memory.write(address, value, value_type)
-  -- To write memory on Android without root (if in same process):
-  -- Untuk menulis memori di Android tanpa root (jika di proses yang sama):
-  -- We can use RandomAccessFile("/proc/self/mem", "rw")
+-- Function to search for a pattern with a gap (wildcard)
+-- prefix: bytes before the gap
+-- suffix: bytes after the gap
+-- gap_len: length of the wildcard gap in bytes
+function memory.searchPattern(prefix, suffix, gap_len, start_addr, end_addr)
+  local raf = io.open("/proc/self/mem", "rb")
+  if not raf then return nil end
 
-  -- import "java.io.RandomAccessFile"
-  -- local raf = RandomAccessFile("/proc/self/mem", "rw")
-  -- raf.seek(address)
-  -- raf.write(byte_array)
-  -- raf.close()
+  local chunk_size = 1024 * 1024 -- 1MB chunks
+  local prefix_len = #prefix
+  local total_len = prefix_len + gap_len + #suffix
 
-  print(string.format("Writing to %X: %s (%s)", address, tostring(value), value_type))
+  local current = start_addr
+  while current < end_addr do
+    local success = raf:seek("set", current)
+    if not success then break end
+
+    local data = raf:read(chunk_size + total_len)
+    if not data then break end
+
+    local pos = 1
+    while true do
+      pos = data:find(prefix, pos, true)
+      if not pos then break end
+
+      -- Check if suffix matches after the gap
+      local suffix_start = pos + prefix_len + gap_len
+      if data:sub(suffix_start, suffix_start + #suffix - 1) == suffix then
+        raf:close()
+        return current + pos - 1
+      end
+      pos = pos + 1
+    end
+
+    current = current + chunk_size
+    if current >= end_addr then break end
+  end
+
+  raf:close()
+  return nil
 end
 
--- Function to read value from memory (Placeholder)
--- Fungsi untuk membaca nilai dari memori (Contoh)
-function memory.read(address, length)
-  -- local raf = RandomAccessFile("/proc/self/mem", "r")
-  -- raf.seek(address)
-  -- ...
-  return nil
+-- Function to write Dword (4 bytes) to memory
+function memory.writeDword(address, value)
+  -- Use r+b to allow writing at an offset without truncation
+  local raf = io.open("/proc/self/mem", "r+b")
+  if not raf then return false end
+
+  local success = raf:seek("set", address)
+  if not success then
+    raf:close()
+    return false
+  end
+
+  -- Pack as 4 bytes little endian (Compatible with all Lua versions)
+  local b = string.char(
+    value % 256,
+    math.floor(value / 256) % 256,
+    math.floor(value / 65536) % 256,
+    math.floor(value / 16777216) % 256
+  )
+
+  raf:write(b)
+  raf:flush()
+  raf:close()
+  return true
 end
 
 return memory
