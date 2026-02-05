@@ -1,6 +1,6 @@
 -- float.lua
 -- Floating Mod Menu for Aurcus Online
--- Layanan Menu Mod Melayang untuk Aurcus Online
+-- Inspired by HAISE39/andl style
 
 require "import"
 import "android.widget.*"
@@ -11,174 +11,185 @@ import "android.content.*"
 import "android.os.*"
 import "android.util.DisplayMetrics"
 
--- Debug Toast / Toast Debug
-Toast.makeText(service, "Float Service Started", Toast.LENGTH_SHORT).show()
-
--- Import our memory utility / Impor alat bantu memori kami
+-- Import our memory utility
 local memory = require("memory")
 
 local wm = service.getSystemService(Context.WINDOW_SERVICE)
-local lp = WindowManager.LayoutParams()
+local dm = service.getResources().getDisplayMetrics()
 
--- Set Overlay Type based on Android version / Atur tipe overlay berdasarkan versi Android
-if Build.VERSION.SDK_INT >= 26 then
-  lp.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-else
-  lp.type = WindowManager.LayoutParams.TYPE_PHONE
+-- Helper function to set background programmatically (Safe for AndLua+)
+function setSafeBackground(view, color, radius, strokeColor)
+  local drawable = GradientDrawable()
+  drawable.setShape(GradientDrawable.RECTANGLE)
+  drawable.setCornerRadii({radius, radius, radius, radius, radius, radius, radius, radius})
+  drawable.setColor(color)
+  if strokeColor then
+    drawable.setStroke(3, strokeColor)
+  end
+  view.setBackgroundDrawable(drawable)
 end
 
--- Fixed size for better visibility / Ukuran tetap agar lebih terlihat
-local dm = service.getResources().getDisplayMetrics()
-local iconSize = math.floor(54 * dm.density)
+-- Layout Parameters for Floating Icon
+local iconLP = WindowManager.LayoutParams()
+if Build.VERSION.SDK_INT >= 26 then
+  iconLP.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+else
+  iconLP.type = WindowManager.LayoutParams.TYPE_PHONE
+end
+iconLP.format = PixelFormat.RGBA_8888
+iconLP.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+iconLP.width = math.floor(54 * dm.density)
+iconLP.height = math.floor(54 * dm.density)
+iconLP.gravity = Gravity.LEFT | Gravity.TOP
+iconLP.x = 100
+iconLP.y = 100
 
-lp.format = PixelFormat.RGBA_8888
-lp.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-lp.width = iconSize
-lp.height = iconSize
-lp.gravity = Gravity.LEFT | Gravity.TOP
-lp.x = 100
-lp.y = 100
+-- Floating Icon
+local iconView = ImageView(service)
+iconView.setImageResource(android.R.drawable.ic_menu_compass)
+iconView.setPadding(10, 10, 10, 10)
+setSafeBackground(iconView, 0xFF40C4FF, math.floor(27 * dm.density), 0xFFFFFFFF)
 
--- Floating Icon (The small button) / Ikon Melayang (Tombol kecil)
-local icon = ImageView(service)
-icon.setImageResource(android.R.drawable.ic_menu_compass)
-
--- Safe programmatic background / Latar belakang terprogram yang aman
-local iconBG = GradientDrawable()
-iconBG.setColor(0xFFFF0000) -- Red / Merah
-iconBG.setCornerRadius(math.floor(27 * dm.density))
-icon.setBackgroundDrawable(iconBG)
-icon.setPadding(10, 10, 10, 10)
-
--- Draggable Logic / Logika Seret
+-- Draggable Logic for Icon
 local lastX, lastY, startX, startY
-icon.onTouch = function(v, event)
+iconView.onTouch = function(v, event)
   local action = event.getAction()
   if action == MotionEvent.ACTION_DOWN then
     startX = event.getRawX()
     startY = event.getRawY()
-    lastX = lp.x
-    lastY = lp.y
+    lastX = iconLP.x
+    lastY = iconLP.y
   elseif action == MotionEvent.ACTION_MOVE then
-    lp.x = lastX + (event.getRawX() - startX)
-    lp.y = lastY + (event.getRawY() - startY)
-    wm.updateViewLayout(icon, lp)
+    iconLP.x = lastX + (event.getRawX() - startX)
+    iconLP.y = lastY + (event.getRawY() - startY)
+    wm.updateViewLayout(iconView, iconLP)
   elseif action == MotionEvent.ACTION_UP then
-    -- If it's a tap, show the menu / Jika diketuk, tampilkan menu
     if math.abs(event.getRawX() - startX) < 10 and math.abs(event.getRawY() - startY) < 10 then
-      showMenu()
+      toggleMenu()
     end
   end
   return true
 end
 
-wm.addView(icon, lp)
+wm.addView(iconView, iconLP)
 
 local menuView = nil
+local isMenuOpen = false
 
--- Mod Menu Dialog / Dialog Menu Mod
-function showMenu()
-  if menuView then return end -- Prevent multiple menus / Cegah menu ganda
+-- Layout Parameters for Main Menu
+local menuLP = WindowManager.LayoutParams()
+menuLP.type = iconLP.type
+menuLP.format = PixelFormat.RGBA_8888
+menuLP.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+menuLP.width = WindowManager.LayoutParams.WRAP_CONTENT
+menuLP.height = WindowManager.LayoutParams.WRAP_CONTENT
+menuLP.gravity = Gravity.CENTER
 
-  -- Simple Layout without dangerous attributes
-  local menuLayout = {
-    LinearLayout,
-    orientation="vertical",
-    layout_width="220dp",
-    padding="15dp",
-    id="menu_main",
-    {
-      TextView,
-      text="AURCUS MOD MENU",
-      textColor="#FFFFFF",
-      gravity="center",
-      textSize="16sp",
-      layout_marginBottom="10dp",
-    },
-    {
-      CheckBox,
-      id="chk_godmode",
-      text="God Mode (Dalvik)",
-      textColor="#FFFFFF",
-    },
-    {
-      CheckBox,
-      id="chk_onehit",
-      text="One Hit Kill (Dalvik)",
-      textColor="#FFFFFF",
-    },
-    {
-      Button,
-      text="HIDE / SEMBUNYIKAN",
-      layout_marginTop="10dp",
-      id="btn_hide",
-    },
-    {
-      Button,
-      text="EXIT INJECTOR / KELUAR",
-      layout_marginTop="5dp",
-      id="btn_exit",
-    }
-  }
-
-  local menuLP = WindowManager.LayoutParams()
-  menuLP.type = lp.type
-  menuLP.format = PixelFormat.RGBA_8888
-  menuLP.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
-  menuLP.width = WindowManager.LayoutParams.WRAP_CONTENT
-  menuLP.height = WindowManager.LayoutParams.WRAP_CONTENT
-  menuLP.gravity = Gravity.CENTER
-
-  -- Load layout safely
-  local ids = {}
-  menuView = loadlayout(menuLayout, ids)
-
-  -- Set background programmatically to avoid loadlayout errors
-  -- Atur latar belakang secara terprogram untuk menghindari kesalahan loadlayout
-  local menuBG = GradientDrawable()
-  menuBG.setColor(0xEE222222)
-  menuBG.setCornerRadius(20)
-  menuBG.setStroke(3, 0xFFFFFFFF) -- White border / Pinggiran putih
-  ids.menu_main.setBackgroundDrawable(menuBG)
-
-  wm.addView(menuView, menuLP)
-
-  -- Button Listeners
-  ids.btn_hide.onClick = function()
+function toggleMenu()
+  if isMenuOpen then
     wm.removeView(menuView)
     menuView = nil
-  end
-
-  ids.btn_exit.onClick = function()
-    service.stopSelf()
-  end
-
-  -- CheckBox Events / Kejadian Kotak Centang
-  ids.chk_godmode.onCheckedChange = function(v, isChecked)
-    if isChecked then
-      local start_addr, end_addr = memory.getDalvikMain()
-      if start_addr then
-        print("God Mode ON - Dalvik: " .. string.format("%X", start_addr))
-      else
-        print("Dalvik range not found! / Rentang Dalvik tidak ditemukan!")
-        v.setChecked(false)
-      end
-    else
-      print("God Mode OFF")
-    end
-  end
-
-  ids.chk_onehit.onCheckedChange = function(v, isChecked)
-    if isChecked then
-       print("One Hit Kill ON")
-    else
-       print("One Hit Kill OFF")
-    end
+    isMenuOpen = false
+  else
+    showMenu()
   end
 end
 
--- Cleanup when service stops / Pembersihan saat layanan berhenti
+function showMenu()
+  local menuLayout = {
+    LinearLayout,
+    orientation="vertical",
+    layout_width="240dp",
+    id="main_container",
+    padding="1dp",
+    {
+      CardView,
+      layout_width="fill",
+      layout_height="wrap",
+      cardBackgroundColor="#202428",
+      radius="12dp",
+      {
+        LinearLayout,
+        orientation="vertical",
+        layout_width="fill",
+        padding="12dp",
+        {
+          TextView,
+          text="AURCUS MOD MENU",
+          textColor="#40C4FF",
+          textSize="16sp",
+          textStyle="bold",
+          gravity="center",
+          layout_marginBottom="10dp",
+        },
+        {
+          ScrollView,
+          layout_width="fill",
+          layout_height="200dp",
+          {
+            LinearLayout,
+            orientation="vertical",
+            layout_width="fill",
+            {
+              CheckBox,
+              id="chk_godmode",
+              text="God Mode",
+              textColor="#FFFFFF",
+            },
+            {
+              CheckBox,
+              id="chk_onehit",
+              text="One Hit Kill",
+              textColor="#FFFFFF",
+            },
+            {
+              CheckBox,
+              id="chk_speed",
+              text="Speed Hack",
+              textColor="#FFFFFF",
+            },
+          }
+        },
+        {
+          Button,
+          id="btn_hide",
+          text="HIDE MENU",
+          layout_marginTop="10dp",
+          layout_width="fill",
+        },
+      }
+    }
+  }
+
+  local ids = {}
+  menuView = loadlayout(menuLayout, ids)
+
+  -- Apply styles
+  setSafeBackground(ids.btn_hide, 0xFF333333, 10)
+  ids.btn_hide.setTextColor(0xFFFFFFFF)
+
+  -- Listeners
+  ids.btn_hide.onClick = function()
+    toggleMenu()
+  end
+
+  ids.chk_godmode.onCheckedChange = function(v, isChecked)
+    if isChecked then
+      local start, _ = memory.getDalvikMain()
+      if start then
+        print("God Mode Active @ " .. string.format("%X", start))
+      else
+        print("Dalvik not found!")
+        v.setChecked(false)
+      end
+    end
+  end
+
+  wm.addView(menuView, menuLP)
+  isMenuOpen = true
+end
+
 function onDestroy()
-  if icon then pcall(function() wm.removeView(icon) end) end
+  if iconView then pcall(function() wm.removeView(iconView) end) end
   if menuView then pcall(function() wm.removeView(menuView) end) end
 end

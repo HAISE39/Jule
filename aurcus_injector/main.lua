@@ -1,6 +1,6 @@
 -- main.lua
 -- Injector for Aurcus Online
--- Package: com.asobimo.aurcusonline.wx
+-- Inspired by HAISE39/andl style
 
 require "import"
 import "android.widget.*"
@@ -11,58 +11,79 @@ import "android.net.Uri"
 import "android.provider.Settings"
 import "android.os.Build"
 
--- Set UI Layout / Atur Tata Letak UI
+-- Set UI Layout
 activity.setContentView(loadlayout("layout"))
 
 local target_package = "com.asobimo.aurcusonline.wx"
 
--- START Button Click Event / Kejadian Klik Tombol START
-btn_start.onClick = function()
-  -- Check Overlay Permission (Required for Mod Menu)
-  -- Periksa Izin Hamparan (Diperlukan untuk Menu Mod)
+function checkPermission()
   if Build.VERSION.SDK_INT >= 23 then
     if not Settings.canDrawOverlays(activity) then
-      print("Please allow 'Display over other apps' / Mohon izinkan 'Tampilkan di atas aplikasi lain'")
+      print("Please allow Overlay Permission")
       local intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
       intent.setData(Uri.parse("package:" .. activity.getPackageName()))
       activity.startActivity(intent)
-      return
+      return false
     end
   end
+  return true
+end
 
-  -- Check if the game is installed / Periksa apakah game sudah terinstal
-  local pm = activity.getPackageManager()
-  local info = nil
-  pcall(function() info = pm.getPackageInfo(target_package, 0) end)
+function startInjector()
+  if not checkPermission() then return end
 
-  if info then
-    -- Launch the game / Jalankan game
-    local intent = pm.getLaunchIntentForPackage(target_package)
-    activity.startActivity(intent)
+  local luaPath = activity.getLuaPath("float.lua")
+  local ok, err = pcall(function()
+    local intent = Intent()
+    intent.setClassName(activity.getPackageName(), "com.androlua.LuaService")
+    intent.putExtra("luaPath", luaPath)
+    activity.startService(intent)
+  end)
 
-    -- Start Floating Mod Menu Service / Mulai Layanan Menu Mod Melayang
-    local luaPath = activity.getLuaPath("float.lua")
-    local f = io.open(luaPath, "r")
-    if f then
-      f:close()
-      local ok, err = pcall(function()
-        local serviceIntent = Intent()
-        serviceIntent.setClassName(activity.getPackageName(), "com.androlua.LuaService")
-        serviceIntent.putExtra("luaPath", luaPath)
-        activity.startService(serviceIntent)
-      end)
+  if ok then
+    status_text.setText("Status: Active")
+    status_text.setTextColor(0xFF40C4FF)
+    print("Injector Started")
 
-      if ok then
-        print("Game started! Starting Mod Menu... / Game dimulai! Memulai Menu Mod...")
-      else
-        print("Failed to start service: " .. tostring(err))
-      end
-    else
-      print("Error: float.lua not found at " .. luaPath)
-    end
-    -- Optional: Minimize the injector app / Opsional: Minimalkan aplikasi injector
+    -- Auto Launch Game
+    launchGame()
+
+    -- Minimize
     activity.moveTaskToBack(true)
   else
-    print("Error: " .. target_package .. " not installed! / Game tidak terinstal!")
+    print("Error: " .. tostring(err))
   end
+end
+
+function stopInjector()
+  local ok, err = pcall(function()
+    local intent = Intent()
+    intent.setClassName(activity.getPackageName(), "com.androlua.LuaService")
+    activity.stopService(intent)
+  end)
+
+  if ok then
+    status_text.setText("Status: Stopped")
+    status_text.setTextColor(0xFFF44336)
+    print("Injector Stopped")
+  end
+end
+
+function launchGame()
+  local pm = activity.getPackageManager()
+  local intent = pm.getLaunchIntentForPackage(target_package)
+  if intent then
+    activity.startActivity(intent)
+  else
+    print("Game not installed!")
+  end
+end
+
+-- Button Click Events
+btn_start.onClick = startInjector
+btn_stop.onClick = stopInjector
+btn_game.onClick = launchGame
+btn_exit.onClick = function()
+  stopInjector()
+  activity.finish()
 end
