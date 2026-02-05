@@ -4,7 +4,7 @@ import "android.view.*"
 import "android.graphics.drawable.*"
 import "android.content.*"
 
--- UI Layout
+-- UI Layout (Restored to Turn 5 Style)
 local layout = {
   LinearLayout,
   orientation="vertical",
@@ -29,42 +29,15 @@ local layout = {
     layout_marginTop="8dp",
   },
   {
-    Button,
-    id="btnInject",
-    text="INJECT SWORD",
+    ListView,
+    id="menuList",
     layout_width="fill",
-    layout_marginTop="16dp",
-  },
-  {
-    Button,
-    id="btnStartGame",
-    text="START AURCUS ONLINE",
-    layout_width="fill",
-    layout_marginTop="8dp",
-  },
-  {
-    Button,
-    id="btnExit",
-    text="EXIT MOD",
-    layout_width="fill",
+    layout_height="fill",
     layout_marginTop="16dp",
   },
 }
 
 local mainView = loadlayout(layout)
-
--- Function to set button background
-local function setButtonStyle(btn, color)
-  local gd = GradientDrawable()
-  gd.setColor(color)
-  gd.setCornerRadius(8)
-  gd.setStroke(2, 0xFFFFFFFF)
-  btn.setBackground(gd)
-end
-
-setButtonStyle(btnInject, 0xFF444444)
-setButtonStyle(btnStartGame, 0xFF006600)
-setButtonStyle(btnExit, 0xFF660000)
 
 -- Floating Window Setup
 local wm = activity.getSystemService(Context.WINDOW_SERVICE)
@@ -94,51 +67,67 @@ mainView.onTouch = function(v, e)
   return true
 end
 
--- Inject Logic
+-- Inject Logic (Refinement Search)
 local function runInjectSword()
   thread(function()
     local memory = require("memory")
-    call(function() statusText.setText("Status: Searching Pattern...") end)
+    call(function() statusText.setText("Status: Searching 80.0...") end)
 
-    -- Search Group pattern 3;30;1;2;1
-    local success = memory.search("3;30;1;2;1", "Dword")
-    local count = memory.getResultsCount()
-
-    if success then
-      call(function() statusText.setText("Status: Found " .. count .. " results. Writing...") end)
-
-      -- Write 99999 to offsets 24, 28, 32, 36
-      memory.write("99999", 24, "Dword")
-      memory.write("99999", 28, "Dword")
-      memory.write("99999", 32, "Dword")
-      memory.write("99999", 36, "Dword")
-
-      call(function()
-        statusText.setText("Status: Injection Successful (" .. count .. " modified)")
-        Toast.makeText(activity, "Sword Injected Successfully!", Toast.LENGTH_SHORT).show()
-      end)
-    else
-      call(function()
-        statusText.setText("Status: Pattern Not Found!")
-        Toast.makeText(activity, "Failed to find pattern in dalvik-main", Toast.LENGTH_LONG).show()
-      end)
+    -- 1. Search 80.0 (Float)
+    if not memory.search("80.0", "Float") then
+      call(function() statusText.setText("Status: 80.0 Not Found!") end)
+      return
     end
+
+    local count = memory.getResultsCount()
+    call(function() statusText.setText("Status: Found " .. count .. ". Refining (72.0)...") end)
+
+    -- 2. Verify 72.0 at offset 192
+    if not memory.offset("72.0", 192, "Float") then
+      call(function() statusText.setText("Status: 72.0 Offset Fail!") end)
+      return
+    end
+
+    -- 3. Verify 2.0 at offset 196
+    if not memory.offset("2.0", 196, "Float") then
+      call(function() statusText.setText("Status: 2.0 Offset Fail!") end)
+      return
+    end
+
+    count = memory.getResultsCount()
+    call(function() statusText.setText("Status: Found " .. count .. ". Writing...") end)
+
+    -- 4. Write 100000.0 at offsets 0 and 192
+    memory.write("100000.0", 0, "Float")
+    memory.write("100000.0", 192, "Float")
+
+    call(function()
+      statusText.setText("Status: Injected Successfully!")
+      Toast.makeText(activity, "Sword Injected!", Toast.LENGTH_SHORT).show()
+    end)
   end)
 end
 
-btnInject.onClick = runInjectSword
+-- Menu Setup
+local menuItems = {"START AURCUS ONLINE", "INJECT SWORD", "EXIT MOD"}
+local adapter = ArrayAdapter(activity, android.R.layout.simple_list_item_1, menuItems)
+menuList.setAdapter(adapter)
 
-btnStartGame.onClick = function()
-  local intent = activity.getPackageManager().getLaunchIntentForPackage("com.asobimo.aurcusonline.wx")
-  if intent then
-    activity.startActivity(intent)
-    statusText.setText("Status: Game Started")
-  else
-    Toast.makeText(activity, "Game not found!", Toast.LENGTH_SHORT).show()
+-- ListView Background handling (ensure text is visible)
+menuList.onItemClick = function(l, v, p, i)
+  local cmd = menuItems[p+1]
+  if cmd == "INJECT SWORD" then
+    runInjectSword()
+  elseif cmd == "START AURCUS ONLINE" then
+    local intent = activity.getPackageManager().getLaunchIntentForPackage("com.asobimo.aurcusonline.wx")
+    if intent then
+      activity.startActivity(intent)
+      statusText.setText("Status: Game Started")
+    else
+      Toast.makeText(activity, "Game not found!", Toast.LENGTH_SHORT).show()
+    end
+  elseif cmd == "EXIT MOD" then
+    wm.removeView(mainView)
+    activity.finish()
   end
-end
-
-btnExit.onClick = function()
-  wm.removeView(mainView)
-  activity.finish()
 end
