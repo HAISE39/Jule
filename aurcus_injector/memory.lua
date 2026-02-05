@@ -1,91 +1,139 @@
--- memory.lua
--- Memory Manipulation Library for AndLua+
--- Targets [anon:dalvik-main space]
-
-require "import"
-import "java.io.RandomAccessFile"
-import "java.lang.String"
-
 local memory = {}
 
--- Helper to create byte arrays safely in any thread
-local function create_byte_array(size)
-  -- In AndLua+, createArray expects a table for dimensions as the second argument
-  return luajava.createArray("byte", {size})
+import "java.io.RandomAccessFile"
+import "java.lang.Float"
+import "java.lang.String"
+
+local results = {}
+local current_range = {start = 0, stop = 0}
+
+-- Helper: Convert value to 4-byte string
+local function valueToBytes(val, type)
+  local i = 0
+  if type == "Dword" then
+    i = math.tointeger(val) or 0
+  elseif type == "Float" then
+    local f = tonumber(val) or 0.0
+    -- Use java.lang.Float to get bits
+    i = Float.floatToRawIntBits(Float.valueOf(f))
+  end
+  -- Pack as 4-byte little-endian string
+  return string.char(i & 0xFF, (i >> 8) & 0xFF, (i >> 16) & 0xFF, (i >> 24) & 0xFF)
 end
 
--- Get the exact address range for [anon:dalvik-main space]
+-- Helper: Convert pattern (e.g. "3;30;1") to bytes
+local function patternToBytes(text, type)
+  local bytes = ""
+  for part in text:gmatch("[^;]+") do
+    bytes = bytes .. valueToBytes(part, type)
+  end
+  return bytes
+end
+
 function memory.getJavaHeapRange()
   local f = io.open("/proc/self/maps", "r")
   if not f then return nil end
-  local start_addr, end_addr
   for line in f:lines() do
-    -- Specifically target 'dalvik-main space' as per GG behavior
-    if line:find("dalvik%-main space") then
-      local s, e = line:match("(%x+)%-(%x+)")
-      if s then
-        start_addr = tonumber(s, 16)
-        end_addr = tonumber(e, 16)
-        break
+    if line:find("%[anon:dalvik%-main space%]") then
+      local start, stop = line:match("(%x+)%-(%x+)")
+      if start and stop then
+        f:close()
+        return tonumber(start, 16), tonumber(stop, 16)
       end
     end
   end
   f:close()
-  return start_addr, end_addr
-end
-
--- Fast memory search using RandomAccessFile and String conversion
-function memory.search(pattern, start_addr, end_addr)
-  local raf = nil
-  local success, err = pcall(function()
-    raf = RandomAccessFile("/proc/self/mem", "r")
-  end)
-  if not success or not raf then return nil end
-
-  local chunk_size = 1024 * 512 -- 512KB chunks
-  local pattern_len = #pattern
-  local current = start_addr
-
-  while current < end_addr do
-    local read_len = math.min(chunk_size + pattern_len, end_addr - current)
-    if read_len <= 0 then break end
-
-    raf.seek(current)
-    local bytes = create_byte_array(read_len)
-    raf.readFully(bytes)
-
-    -- ISO-8859-1 keeps bytes as-is for binary searching
-    local data = String(bytes, "ISO-8859-1").toString()
-    local pos = data:find(pattern, 1, true)
-
-    if pos then
-      raf.close()
-      return current + pos - 1
-    end
-
-    current = current + chunk_size
-  end
-
-  raf.close()
   return nil
 end
 
--- Write a 4-byte DWORD to memory (Little Endian)
-function memory.writeDword(address, value)
-  local raf = nil
-  local success, err = pcall(function()
-    raf = RandomAccessFile("/proc/self/mem", "rw")
-  end)
-  if not success or not raf then return false end
+function memory.clear()
+  results = {}
+end
 
-  raf.seek(address)
-  local b = create_byte_array(4)
-  b[0] = (value & 0xFF)
-  b[1] = ((value >> 8) & 0xFF)
-  b[2] = ((value >> 16) & 0xFF)
-  b[3] = ((value >> 24) & 0xFF)
+function memory.getResultsCount()
+  return #results
+end
 
-  raf.write(b)
+function memory.search(text, type)
+  memory.clear()
+  local start, stop = memory.getJavaHeapRange()
+  if not start then return false end
+  current_range.start = start
+  current_range.stop = stop
+
+  local pattern = patternToBytes(text, type)
+  local raf = RandomAccessFile("/proc/self/mem", "r")
+  -- Use smaller chunks to avoid memory issues and table.unpack limits
+  -- But since we use String(buffer), we can use larger chunks.
+  local chunkSize = 128 * 1024 -- 128KB
+  local overlap = #pattern - 1
+
+  for current = start, stop - #pattern, chunkSize - overlap do
+    local size = math.min(chunkSize, stop - current)
+    if size < #pattern then break end
+
+    raf.seek(current)
+    local buffer = luajava.createArray("byte", {size})
+    raf.readFully(buffer)
+    -- Convert byte array to Lua string via Java String
+    local content = tostring(String(buffer, "ISO-8859-1"))
+
+    local pos = 1
+    while true do
+      pos = content:find(pattern, pos, true)
+      if not pos then break end
+      table.insert(results, current + pos - 1)
+      if #results >= 10000 then break end -- Limit results
+      pos = pos + 1
+    end
+    if #results >= 10000 then break end
+  end
+  raf.close()
+  return #results > 0
+end
+
+function memory.offset(text, offset, type)
+  if #results == 0 then return false end
+  local pattern = patternToBytes(text, type)
+  local new_results = {}
+  local raf = RandomAccessFile("/proc/self/mem", "r")
+
+  for _, addr in ipairs(results) do
+    local target = addr + offset
+    if target >= current_range.start and target <= current_range.stop - #pattern then
+      raf.seek(target)
+      local buffer = luajava.createArray("byte", {#pattern})
+      raf.readFully(buffer)
+      local content = tostring(String(buffer, "ISO-8859-1"))
+      if content == pattern then
+        table.insert(new_results, addr)
+      end
+    end
+  end
+
+  raf.close()
+  results = new_results
+  return #results > 0
+end
+
+function memory.write(text, offset, type)
+  if #results == 0 then return false end
+  local data = patternToBytes(text, type)
+  local raf = RandomAccessFile("/proc/self/mem", "rw")
+
+  for _, addr in ipairs(results) do
+    local target = addr + offset
+    if target >= current_range.start and target <= current_range.stop - #data then
+      raf.seek(target)
+      local b = luajava.createArray("byte", {#data})
+      for i=1, #data do
+        local val = data:byte(i)
+        if val > 127 then val = val - 256 end
+        b[i-1] = val
+      end
+      raf.write(b)
+    end
+  end
   raf.close()
   return true
 end
