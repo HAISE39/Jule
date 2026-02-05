@@ -1,6 +1,6 @@
 # Aurcus Online Injector (AndLua+)
 
-This is the **Final Production Source Code** for the Aurcus Online injector. This script is fully functional and specifically targets the **Open Bag** feature as requested.
+This is the **Final Production Source Code** for the Aurcus Online injector. This script is fully functional and specifically targets the **Inject Sword** feature as requested.
 
 ## ⚠️ MANDATORY REQUIREMENTS (Tanpa Root)
 
@@ -14,9 +14,9 @@ For this injector to work on a non-rooted device, you **MUST** follow these step
 4.  **Overlay Permission**: You must allow "Display over other apps" when prompted.
 
 ## Features
-- **Open Bag**: Searches for the hex pattern and writes `12` (DWORD) at offset +4.
-- **Java Heap Only**: Only scans the `dalvik-main space` region.
-- **Background Search**: No UI freezing during memory scanning.
+- **Inject Sword**: Searches for the pattern `3;30;1;2;1` (DWORDs) and writes `99999` to offsets 24, 28, 32, and 36 relative to the `30` anchor.
+- **Java Heap Only**: Specifically scans the `dalvik-main space` region to match GameGuardian behavior.
+- **Background Search**: Memory scanning is performed in a background thread to prevent UI freezing.
 
 ## Files
 - `main.lua`: Full source code with UI and mod logic.
@@ -27,7 +27,7 @@ For this injector to work on a non-rooted device, you **MUST** follow these step
 
 # Injector Aurcus Online (AndLua+)
 
-Ini adalah **Kode Sumber Produksi Final** untuk injector Aurcus Online. Script ini sudah jadi (bukan placeholder) dan menargetkan fitur **Open Bag**.
+Ini adalah **Kode Sumber Produksi Final** untuk injector Aurcus Online. Script ini sudah jadi (bukan placeholder) dan menargetkan fitur **Injek Pedang**.
 
 ## ⚠️ PERSYARATAN WAJIB (Tanpa Root)
 
@@ -41,6 +41,6 @@ Agar injector ini berfungsi di perangkat non-root, Anda **WAJIB** mengikuti lang
 4.  **Izin Hamparan**: Anda harus mengizinkan "Tampilkan di atas aplikasi lain" saat diminta.
 
 ## Fitur
-- **Open Bag**: Mencari pola hex dan menulis `12` (DWORD) pada offset +4.
-- **Hanya Java Heap**: Hanya memindai wilayah `dalvik-main space`.
+- **Injek Pedang**: Mencari pola `3;30;1;2;1` (DWORD) dan menulis `99999` pada offset 24, 28, 32, dan 36 relatif terhadap nilai `30`.
+- **Hanya Java Heap**: Memindai wilayah `dalvik-main space` sesuai perilaku GameGuardian.
 - **Pencarian Latar Belakang**: Tidak ada UI yang membeku saat pemindaian memori.

@@ -1,6 +1,6 @@
 -- main.lua
 -- Injector for Aurcus Online
--- Targets: com.asobimo.aurcusonline.wx
+-- Package: com.asobimo.aurcusonline.wx
 
 require "import"
 import "android.widget.*"
@@ -24,12 +24,6 @@ local target_package = "com.asobimo.aurcusonline.wx"
 local wm = activity.getSystemService(Context.WINDOW_SERVICE)
 local dm = activity.getResources().getDisplayMetrics()
 
--- Mod Logic
--- Pattern: FF FF FF FF 02 00 00 00 FF FF FF FF 00 00 00 00 00 00 00 00
-local MOD_PATTERN = "\xff\xff\xff\xff\x02\0\0\0\xff\xff\xff\xff\0\0\0\0\0\0\0\0"
-local VAL_TARGET = 12 -- Decimal
-local VAL_ORIGINAL = 2
-
 -- UI State
 local iconView = nil
 local menuView = nil
@@ -44,34 +38,50 @@ function setSafeBackground(view, color, radius)
   view.setBackgroundDrawable(drawable)
 end
 
-function runOpenBag(isChecked)
-  thread(function(checked)
+function runInjectSword()
+  -- Move pattern and value inside or pass them to ensure they are available in the thread
+  thread(function()
     require "import"
     local memory = require("memory")
 
-    call("updateStatus", "Searching...")
+    -- Pattern: 3;30;1;2;1 (All DWORD)
+    local MOD_PATTERN = "\x03\0\0\0\x1e\0\0\0\x01\0\0\0\x02\0\0\0\x01\0\0\0"
+    local VAL_TARGET = 99999
+
+    call("updateStatus", "Searching Pattern...")
 
     local start, stop = memory.getJavaHeapRange()
     if not start then
-      call("updateStatus", "Error: Heap not found")
+      call("updateStatus", "Error: Java Heap Not Found")
       return
     end
 
-    local addr = memory.search(MOD_PATTERN, start, stop)
-    if addr then
-      -- User said: "edit pada offset addres 4 nya menjadi 12 type dword"
-      local target_addr = addr + 4
-      local value = checked and VAL_TARGET or VAL_ORIGINAL
+    local base_addr = memory.search(MOD_PATTERN, start, stop)
+    if base_addr then
+      -- Anchor is the address of value '30' which is base + 4
+      local anchor = base_addr + 4
 
-      if memory.writeDword(target_addr, value) then
-        call("updateStatus", checked and "Bag Open: ACTIVE" or "Bag Open: RESET")
+      -- Edit offsets 24, 28, 32, 36 from anchor
+      local offsets = {24, 28, 32, 36}
+      local success_count = 0
+
+      for _, offset in ipairs(offsets) do
+        if memory.writeDword(anchor + offset, VAL_TARGET) then
+          success_count = success_count + 1
+        end
+      end
+
+      if success_count == #offsets then
+        call("updateStatus", "Sword Inject: SUCCESS")
+        print("Sword Injected Successfully! / Pedang Berhasil Diinjek!")
       else
-        call("updateStatus", "Error: Write Failed")
+        call("updateStatus", "Error: Partial Write ("..success_count..")")
       end
     else
-      call("updateStatus", "Error: Code Not Found")
+      call("updateStatus", "Error: Pattern Not Found")
+      print("Sword Pattern Not Found! / Pola Pedang Tidak Ditemukan!")
     end
-  end, isChecked)
+  end)
 end
 
 function updateStatus(msg)
@@ -107,16 +117,18 @@ function showMenu()
           layout_marginBottom="15dp",
         },
         {
-          CheckBox,
-          id="chk_bag",
-          text="Open Bag",
+          Button,
+          id="btn_inject_sword",
+          text="INJECT SWORD / INJEK PEDANG",
+          layout_width="fill",
+          layout_height="50dp",
           textColor="#FFFFFF",
         },
         {
           Button,
           id="btn_hide",
           text="HIDE MENU",
-          layout_marginTop="20dp",
+          layout_marginTop="10dp",
           layout_width="fill",
         },
       }
@@ -125,6 +137,7 @@ function showMenu()
 
   local ids = {}
   menuView = loadlayout(menuLayout, ids)
+  setSafeBackground(ids.btn_inject_sword, 0xFF4CAF50, 10)
   setSafeBackground(ids.btn_hide, 0xFF333333, 10)
   ids.btn_hide.setTextColor(0xFFFFFFFF)
 
@@ -134,8 +147,8 @@ function showMenu()
     isMenuOpen = false
   end
 
-  ids.chk_bag.onCheckedChange = function(v, isChecked)
-    runOpenBag(isChecked)
+  ids.btn_inject_sword.onClick = function()
+    runInjectSword()
   end
 
   local menuLP = WindowManager.LayoutParams()
