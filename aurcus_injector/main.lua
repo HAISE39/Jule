@@ -3,20 +3,51 @@ import "android.widget.*"
 import "android.view.*"
 import "android.graphics.drawable.*"
 import "android.content.*"
+import "android.graphics.Typeface"
 
--- UI Layout (Gaya Feb 5 23:31)
-local layout = {
+-- Modern UI Background Helper
+local function getModernBackground(color, radius, strokeColor)
+  local gd = GradientDrawable()
+  gd.setColor(color)
+  gd.setCornerRadius(radius or 30)
+  if strokeColor then
+    gd.setStroke(4, strokeColor)
+  end
+  return gd
+end
+
+-- --- UI Layouts ---
+
+-- 1. Floating Icon Layout
+local iconLayout = {
+  LinearLayout,
+  layout_width="50dp",
+  layout_height="50dp",
+  gravity="center",
+  id="floatingIcon",
+  {
+    TextView,
+    text="V",
+    textColor="#00FF00",
+    textSize="24sp",
+    textStyle="bold",
+  }
+}
+
+-- 2. Main Menu Layout
+local menuLayout = {
   LinearLayout,
   orientation="vertical",
-  layout_width="fill",
-  layout_height="fill",
-  backgroundColor="#CC000000",
+  layout_width="280dp",
+  layout_height="wrap_content",
+  id="mainMenu",
   padding="16dp",
   {
     TextView,
-    text="VELLIXAO - AURCUS INJECTOR",
+    text="VELLIXAO AURCUS",
     textColor="#00FF00",
     textSize="18sp",
+    textStyle="bold",
     gravity="center",
     layout_width="fill",
   },
@@ -24,36 +55,96 @@ local layout = {
     TextView,
     id="statusText",
     text="Status: Ready",
-    textColor="#FFFFFF",
-    textSize="14sp",
-    layout_marginTop="8dp",
+    textColor="#AAAAAA",
+    textSize="12sp",
+    gravity="center",
+    layout_marginTop="4dp",
+    layout_width="fill",
   },
   {
-    ListView,
-    id="menuList",
+    LinearLayout,
+    orientation="horizontal",
     layout_width="fill",
-    layout_height="fill",
     layout_marginTop="16dp",
+    gravity="center_vertical",
+    {
+      TextView,
+      text="Plot Armor",
+      textColor="#FFFFFF",
+      textSize="16sp",
+      layout_weight=1,
+    },
+    {
+      Switch,
+      id="switchPlotArmor",
+    }
+  },
+  {
+    Button,
+    id="btnClose",
+    text="HIDE MENU",
+    textColor="#FFFFFF",
+    layout_marginTop="20dp",
+    layout_width="fill",
   },
 }
 
-local mainView = loadlayout(layout)
+-- --- Initialization ---
 
--- Floating Window Setup
+local iconView = loadlayout(iconLayout)
+local menuView = loadlayout(menuLayout)
+
+iconView.setBackground(getModernBackground(0xCC000000, 25, 0xFF00FF00))
+menuView.setBackground(getModernBackground(0xEE111111, 40, 0xFF00FF00))
+
+-- WindowManager Setup
 local wm = activity.getSystemService(Context.WINDOW_SERVICE)
 local lp = WindowManager.LayoutParams()
 lp.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
 lp.format = 1
 lp.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-lp.width = 600
-lp.height = 800
+lp.width = WindowManager.LayoutParams.WRAP_CONTENT
+lp.height = WindowManager.LayoutParams.WRAP_CONTENT
 lp.gravity = Gravity.LEFT | Gravity.TOP
+lp.x = 100
+lp.y = 300
 
-wm.addView(mainView, lp)
+-- Initial state: Show Icon
+wm.addView(iconView, lp)
 
--- Dragging logic
+-- --- Logic Functions ---
+
+-- Auto Launch Game
+local function launchGame()
+  local pkg = "com.asobimo.aurcusonline.wx"
+  local intent = activity.getPackageManager().getLaunchIntentForPackage(pkg)
+  if intent then
+    activity.startActivity(intent)
+  else
+    Toast.makeText(activity, "Game not found!", Toast.LENGTH_SHORT).show()
+  end
+end
+
+launchGame()
+
+-- Toggle UI
+local isMenuVisible = false
+
+local function showMenu()
+  wm.removeView(iconView)
+  wm.addView(menuView, lp)
+  isMenuVisible = true
+end
+
+local function hideMenu()
+  wm.removeView(menuView)
+  wm.addView(iconView, lp)
+  isMenuVisible = false
+end
+
+-- Dragging Logic
 local startX, startY, initialX, initialY
-mainView.onTouch = function(v, e)
+local function handleTouch(v, e)
   if e.getAction() == MotionEvent.ACTION_DOWN then
     startX = e.getRawX()
     startY = e.getRawY()
@@ -62,72 +153,50 @@ mainView.onTouch = function(v, e)
   elseif e.getAction() == MotionEvent.ACTION_MOVE then
     lp.x = initialX + (e.getRawX() - startX)
     lp.y = initialY + (e.getRawY() - startY)
-    wm.updateViewLayout(mainView, lp)
+    wm.updateViewLayout(v, lp)
   end
-  return true
+  return false
 end
 
--- Inject Logic v1 (Original Pattern)
-local function runInjectV1()
+iconView.onTouch = handleTouch
+menuView.onTouch = handleTouch
+
+-- Click to Open Menu
+iconView.onClick = showMenu
+btnClose.onClick = hideMenu
+
+-- --- Feature: Plot Armor ---
+
+local function runPlotArmor(enabled)
+  if not enabled then
+    statusText.setText("Status: Disabled")
+    return
+  end
+
   thread(function()
     local memory = require("memory")
-    call(function() statusText.setText("Status: V1 Searching...") end)
-    local results = memory.search("3;30;1;2;1", "Dword")
-    if #results == 0 then
-      call(function() statusText.setText("Status: V1 Not Found") end)
-      return
-    end
-    memory.writeBatch(results, "99999", 24, "Dword")
-    memory.writeBatch(results, "99999", 28, "Dword")
-    memory.writeBatch(results, "99999", 32, "Dword")
-    memory.writeBatch(results, "99999", 36, "Dword")
-    call(function() statusText.setText("Status: V1 Success ("..#results..")") end)
-  end)
-end
+    call(function() statusText.setText("Status: Scanning Plot Armor...") end)
 
--- Inject Logic v2 (Float Refinement)
-local function runInjectV2()
-  thread(function()
-    local memory = require("memory")
-    call(function() statusText.setText("Status: V2 Searching...") end)
-    local results = memory.search("80.0", "Float")
-    if #results == 0 then
-      call(function() statusText.setText("Status: V2 80.0 Not Found") end)
-      return
-    end
-    results = memory.refine(results, "72.0", 192, "Float")
-    results = memory.refine(results, "2.0", 196, "Float")
-    if #results == 0 then
-      call(function() statusText.setText("Status: V2 Verify Fail") end)
-      return
-    end
-    memory.writeBatch(results, "100000.0", 0, "Float")
-    memory.writeBatch(results, "100000.0", 192, "Float")
-    call(function() statusText.setText("Status: V2 Success ("..#results..")") end)
-  end)
-end
+    -- Pattern 8;2;0;65536;1 (Dword)
+    local pattern = "8;2;0;65536;1"
+    local results = memory.search(pattern, "Dword")
 
--- Menu Items
-local menuItems = {"START AURCUS ONLINE", "INJECT SWORD (v1 - Pattern)", "INJECT SWORD (v2 - Float)", "EXIT MOD"}
-local adapter = ArrayAdapter(activity, android.R.layout.simple_list_item_1, menuItems)
-menuList.setAdapter(adapter)
-
-menuList.onItemClick = function(l, v, p, i)
-  local cmd = menuItems[p+1]
-  if cmd == "INJECT SWORD (v1 - Pattern)" then
-    runInjectV1()
-  elseif cmd == "INJECT SWORD (v2 - Float)" then
-    runInjectV2()
-  elseif cmd == "START AURCUS ONLINE" then
-    local intent = activity.getPackageManager().getLaunchIntentForPackage("com.asobimo.aurcusonline.wx")
-    if intent then
-      activity.startActivity(intent)
-      statusText.setText("Status: Game Started")
+    if #results > 0 then
+      -- Value 65536 is at offset +12 (index 3)
+      memory.writeBatch(results, "-1", 12, "Dword")
+      call(function()
+        statusText.setText("Status: Plot Armor Active ("..#results..")")
+        Toast.makeText(activity, "Plot Armor Applied!", Toast.LENGTH_SHORT).show()
+      end)
     else
-      Toast.makeText(activity, "Game not found!", Toast.LENGTH_SHORT).show()
+      call(function()
+        statusText.setText("Status: Pattern Not Found")
+        Toast.makeText(activity, "Plot Armor Scan Failed", Toast.LENGTH_SHORT).show()
+      end)
     end
-  elseif cmd == "EXIT MOD" then
-    wm.removeView(mainView)
-    activity.finish()
-  end
+  end)
+end
+
+switchPlotArmor.onCheckedChange = function(v, isChecked)
+  runPlotArmor(isChecked)
 end

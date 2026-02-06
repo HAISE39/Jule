@@ -4,7 +4,7 @@ import "java.io.RandomAccessFile"
 import "java.lang.Float"
 import "java.lang.String"
 
--- Helper to convert value to little-endian bytes
+-- Convert value to 4-byte little-endian string
 function memory.pack(val, type)
   local i = 0
   if type == "Float" then
@@ -15,15 +15,17 @@ function memory.pack(val, type)
   return string.char(i & 0xFF, (i >> 8) & 0xFF, (i >> 16) & 0xFF, (i >> 24) & 0xFF)
 end
 
--- Helper to convert bytes to value
+-- Convert 4-byte string to value
 function memory.unpack(bytes, type)
   local i = bytes:byte(1) | (bytes:byte(2) << 8) | (bytes:byte(3) << 16) | (bytes:byte(4) << 24)
   if type == "Float" then
     return Float.intBitsToFloat(i)
   end
+  -- Handle signed 32-bit if needed, but for mods usually unsigned/raw is fine
   return i
 end
 
+-- Get dalvik-main memory range (Java Heap)
 function memory.getJavaHeapRange()
   local f = io.open("/proc/self/maps", "r")
   if not f then return nil end
@@ -40,12 +42,11 @@ function memory.getJavaHeapRange()
   return nil
 end
 
--- Search for a pattern (Dword or Float)
+-- Search for a pattern or single value
 function memory.search(val, type)
   local start, stop = memory.getJavaHeapRange()
   if not start then return {} end
 
-  -- Handle group pattern like "3;30;1"
   local pattern = ""
   for part in tostring(val):gmatch("[^;]+") do
     pattern = pattern .. memory.pack(part, type)
@@ -79,27 +80,33 @@ function memory.search(val, type)
   return results
 end
 
--- Efficiently refine a list of results
-function memory.refine(results, val, offset, type)
-  local new_results = {}
-  local pattern = memory.pack(val, type)
+-- Read single value
+function memory.read(addr, type)
   local raf = RandomAccessFile("/proc/self/mem", "r")
-
-  for _, addr in ipairs(results) do
-    raf.seek(addr + offset)
-    local buffer = luajava.createArray("byte", {4})
-    raf.readFully(buffer)
-    local content = tostring(String(buffer, "ISO-8859-1"))
-    if content == pattern then
-      table.insert(new_results, addr)
-    end
-  end
-
+  raf.seek(addr)
+  local buffer = luajava.createArray("byte", {4})
+  raf.readFully(buffer)
   raf.close()
-  return new_results
+  local bytes = tostring(String(buffer, "ISO-8859-1"))
+  return memory.unpack(bytes, type)
 end
 
--- Efficiently write to a list of results
+-- Write single value
+function memory.write(addr, val, type)
+  local raf = RandomAccessFile("/proc/self/mem", "rw")
+  raf.seek(addr)
+  local data = memory.pack(val, type)
+  local b = luajava.createArray("byte", {4})
+  for i=1, 4 do
+    local byte = data:byte(i)
+    if byte > 127 then byte = byte - 256 end
+    b[i-1] = byte
+  end
+  raf.write(b)
+  raf.close()
+end
+
+-- Write to multiple addresses
 function memory.writeBatch(results, val, offset, type)
   local raf = RandomAccessFile("/proc/self/mem", "rw")
   local data = memory.pack(val, type)
