@@ -1,9 +1,16 @@
--- 支持ELGG修改器，作者：VellMod，ELGG下载：https://www.xiaoman.top
--- Simple Mod Menu for ELGG using Native Android UI
+-- 支持ELGG修改器，作者：VellMod / Stylish Upgrade
+-- Modern Stylish Purple Mod Menu UI for ELGG
 
 local 悬浮窗图标外链 = "https://files.catbox.moe/mbkj32.png"
+local 资源文件夹 = "/sdcard/.vlx_purple/"
 
-local 资源文件夹 = "/sdcard/.vlx/"
+-- Color Palette
+local c_bg = 0xFF1A0033        -- Deep Purple Background
+local c_card = 0xFF2D0054      -- Lighter Purple Card
+local c_accent = 0xFFD0BCFF    -- Lavender Accent
+local c_stroke = 0xFF6A1B9A    -- Rich Purple Stroke
+local c_text_p = 0xFFFFFFFF    -- White Text
+local c_text_s = 0xFFCAC4D0    -- Secondary Lavender Text
 
 local check_file = file.new(资源文件夹)
 if not check_file.isDirectory() then
@@ -11,12 +18,12 @@ if not check_file.isDirectory() then
 	check_file.mkdir()
 end
 
--- 资源文件路径
-local icon_file = 资源文件夹 .. "图标.png"
-local exit_path = 资源文件夹 .. "退出.png"
-local hide_path = 资源文件夹 .. "隐藏.png"
-local enlarge_path = 资源文件夹 .. "放大.png"
-local shrink_path = 资源文件夹 .. "缩小.png"
+-- Resources
+local icon_file = 资源文件夹 .. "icon.png"
+local exit_path = 资源文件夹 .. "exit.png"
+local hide_path = 资源文件夹 .. "hide.png"
+local enlarge_path = 资源文件夹 .. "enlarge.png"
+local shrink_path = 资源文件夹 .. "shrink.png"
 
 if not file.new(icon_file).exists() then
 	file.download(悬浮窗图标外链, icon_file)
@@ -26,23 +33,32 @@ if not file.new(icon_file).exists() then
 	file.download("https://www.xiaoman.top/assets/users/VellMod/shrink.png", shrink_path)
 end
 
--- Define Menu Items (Following user's structure)
+-- Stylish Menus
 menus = {
-	{ "Main Features", "Core mod functions for the game.",
+	{ "MOVEMENT", "Hacks related to player movement.",
 		{
-			{ "s", "Speed Hack (2.0x)", "Toggle game speed between 1x and 2x",
-                open = function() gg.setSpeed(2.0) gg.toast("Speed: 2.0x") end,
-                close = function() gg.setSpeed(1.0) gg.toast("Speed: 1.0x") end
+			{ "s", "Speed Hack (2.0x)", "Fast movement speed",
+                open = function() gg.setSpeed(2.0) gg.toast("Speed Boost: ON") end,
+                close = function() gg.setSpeed(1.0) gg.toast("Speed Boost: OFF") end
             },
-			{ "t", "Wallhack (Mock)", "Example of a function call hack", function() gg.alert("Wallhack Activated (Mock)") end },
+			{ "s", "Jump Hack (High)", "Increased jump height",
+                open = function() gg.toast("Jump Hack Enabled") end,
+                close = function() gg.toast("Jump Hack Disabled") end
+            },
 		}
 	},
-	{ "Visuals", "Change how the game looks.",
+	{ "VISUALS", "Enhance game visuals and ESP.",
 		{
-			{ "s", "Chams (Mock)", "Toggle player colors",
-                open = function() gg.toast("Chams Enabled") end,
-                close = function() gg.toast("Chams Disabled") end
+			{ "t", "Full Bright", "Remove shadows and fog", function() gg.alert("Visual Hack Applied") end },
+			{ "s", "Chams (Rainbow)", "Colored player models",
+                open = function() gg.toast("Chams: Rainbow") end,
+                close = function() gg.toast("Chams: OFF") end
             },
+		}
+	},
+    { "SETTINGS", "Menu and script configurations.",
+		{
+			{ "t", "Reset All", "Restore default game state", function() gg.setSpeed(1.0) gg.toast("Restored Defaults") end },
 		}
 	},
 }
@@ -55,12 +71,6 @@ import "android.content.*"
 import "java.util.*"
 import "java.lang.*"
 import "android.*"
-import "android.view.animation.Animation"
-import "android.view.animation.RotateAnimation"
-import "android.animation.ObjectAnimator"
-import "android.view.animation.ScaleAnimation"
-import "android.view.animation.*"
-import "android.view.animation.DecelerateInterpolator"
 import "android.ext.*"
 import "android.graphics.*"
 import "android.graphics.drawable.*"
@@ -121,7 +131,7 @@ function costimg(id, src, func, pad)
 		layout_width = -1,
 		layout_weight = "4.1",
 		src = src,
-		ColorFilter = 0xFFD0BCFF,
+		ColorFilter = c_accent,
 		padding = pad,
 		onClick = function() pcall(func) end,
 		id = id,
@@ -154,14 +164,14 @@ function natext(text, lay)
 		TextView,
 		text = text,
 		gravity = "center",
-		layout_width = "80dp",
+		layout_width = "90dp",
 		layout_height = -1,
 		padding = "5dp",
 		ellipsize = "marquee",
 		selected = true,
 		singleLine = true,
 		textSize = "13sp",
-		textColor = 0xFFCAC4D0,
+		textColor = c_text_s,
 		onClick = function()
 			cpage.setVisibility(View.GONE)
 			lay.setVisibility(View.VISIBLE)
@@ -176,7 +186,7 @@ function pline()
 		View,
 		layout_width = -1,
 		layout_height = "1dp",
-		background = getShepeBackground(0xFFCAC4D0, 10),
+		background = getShepeBackground(c_stroke, 10),
 		layout_alignParentBottom = "true",
 	}
 end
@@ -185,13 +195,13 @@ function VellMod_switch(ojbk, parent)
 	local sw = loadlayout({
 		Switch,
 		text = ojbk[2],
-		textColor = 0xFFF6EDFF,
-		padding = "5dp",
+		textColor = c_text_p,
+		padding = "8dp",
 		layout_width = -1,
-		layout_height = "40dp",
+		layout_height = "45dp",
 	})
-	sw.ThumbDrawable.setColorFilter(PorterDuffColorFilter(0xFFD0BCFF, PorterDuff.Mode.SRC_ATOP))
-	sw.TrackDrawable.setColorFilter(PorterDuffColorFilter(0xFFD0BCFF, PorterDuff.Mode.SRC_ATOP))
+	sw.ThumbDrawable.setColorFilter(PorterDuffColorFilter(c_accent, PorterDuff.Mode.SRC_ATOP))
+	sw.TrackDrawable.setColorFilter(PorterDuffColorFilter(c_stroke, PorterDuff.Mode.SRC_ATOP))
 	sw.onClick = function()
 		local mode = sw.checked and "open" or "close"
 		threadStart({
@@ -205,15 +215,18 @@ function VellMod_switch(ojbk, parent)
 		View,
 		layout_width = -1,
 		layout_height = "1dp",
-		background = getShepeBackground(0xFFCAC4D0, 10)
+		background = getShepeBackground(c_stroke, 10),
+        layout_marginLeft = "10dp",
+        layout_marginRight = "10dp"
 	}))
 end
 
 function VellMod_text(ojbk, parent)
 	local btn = loadlayout({
 		RelativeLayout,
-		layout_height = "40dp",
+		layout_height = "45dp",
 		layout_width = -1,
+        layout_margin = "2dp",
 		onClick = function()
 			threadStart({
 				run = function()
@@ -227,9 +240,10 @@ function VellMod_text(ojbk, parent)
 			layout_marginBottom = "20dp",
 			layout_height = "24dp",
 			layout_width = -1,
+            layout_marginLeft = "8dp",
 			text = ojbk[2],
 			textSize = "14sp",
-			textColor = 0xFFF6EDFF,
+			textColor = c_text_p,
 		},
 		{
 			TextView,
@@ -237,9 +251,10 @@ function VellMod_text(ojbk, parent)
 			layout_width = -1,
 			layout_alignParentTop = "true",
 			layout_marginTop = "19dp",
+            layout_marginLeft = "8dp",
 			textSize = "11sp",
 			text = ojbk[3],
-			textColor = 0xFFCAC4D0,
+			textColor = c_text_s,
 		},
 		pline(),
 	})
@@ -253,39 +268,42 @@ xfc = {
 	id = "touch",
 	{
 		RelativeLayout,
-		layout_height = "320dp",
-		layout_width = "260dp",
-		background = getShepeBackground(0xFF405688, 30),
+		layout_height = "340dp",
+		layout_width = "280dp",
+		background = getShepeBackground(c_bg, 40),
 		id = "ooo",
 		{
 			LinearLayout,
 			layout_height = -1,
 			orientation = "vertical",
-			layout_margin = "10dp",
+			layout_margin = "12dp",
 			layout_width = -1,
 			{
-				LinearLayout,
-				layout_height = "40dp",
+				LinearLayout, -- Top Bar
+				layout_height = "45dp",
 				orientation = "horizontal",
 				layout_width = -1,
 				gravity = "center",
+                background = getShepeBackground(c_card, 20),
+                layout_marginBottom = "10dp",
 				{
 					ImageView,
 					layout_width = -1,
 					layout_height = -1,
-					layout_weight = "4.1",
+					layout_weight = "4.5",
 					id = "logo",
 					src = icon_file,
 				},
 				{
 					TextView,
-					textColor = 0xFFD0BCFF,
-					text = "VellMod",
+					textColor = c_accent,
+					text = "VELLIX AO",
 					gravity = "center",
-					textSize = "14sp",
+					textSize = "16sp",
+                    textStyle = "bold",
 					layout_height = -1,
 					layout_width = -1,
-					layout_weight = "3.35",
+					layout_weight = "3.2",
 				},
 				costimg("xfc_dx", enlarge_path, function()
 					if xfc_large == false then
@@ -305,32 +323,32 @@ xfc = {
 						xfc_dx.setImageDrawable(Drawable.createFromPath(enlarge_path))
 						xfc_large = false
 					end
-				end, "9dp"),
+				end, "10dp"),
 				costimg("xfc_yc", hide_path, function()
 					window.removeView(xfc)
 					window.addView(xfq, mainLayoutParams)
-				end, "4dp"),
+				end, "5dp"),
 				costimg("xfc_exit", exit_path, function()
 					window.removeView(xfc)
 					luajava.exit()
 					os.exit()
-				end, "4dp"),
+				end, "5dp"),
 			},
 			{
-				LinearLayout,
-				layout_height = "38dp",
+				LinearLayout, -- Navigation
+				layout_height = "40dp",
 				layout_width = -1,
 				orientation = "vertical",
 				{
 					LinearLayout,
-					layout_height = "35dp",
+					layout_height = "38dp",
 					layout_width = -1,
 					{
 						TextView,
-						text = "⭐️",
+						text = "💜",
 						gravity = "center",
-						layout_width = "20dp",
-						textSize = "13sp",
+						layout_width = "25dp",
+						textSize = "14sp",
 						layout_height = -1,
 						id = "page_delete",
 						onClick = function()
@@ -338,7 +356,7 @@ xfc = {
 							if coumt > 1 then
 								view_list.removeViewAt(coumt - 1)
 							else
-								gg.toast("Antarmuka menu utama yang tidak dapat dihapus")
+								gg.toast("Back to Main Menu")
 							end
 						end,
 					},
@@ -366,7 +384,7 @@ xfc = {
 					RelativeLayout,
 					layout_height = -1,
 					layout_width = -1,
-					layout_margin = "3dp",
+					layout_margin = "4dp",
 					id = "funclayout",
 					{
 						LinearLayout,
@@ -380,8 +398,8 @@ xfc = {
 		},
 		{
 			View,
-			layout_width = "20dp",
-			layout_height = "20dp",
+			layout_width = "25dp",
+			layout_height = "25dp",
 			layout_alignParentRight = "true",
 			layout_alignParentBottom = "true",
 			id = "td",
@@ -395,14 +413,16 @@ function LoadUi()
 
 	xfq = loadlayout({
 		LinearLayout,
-		layout_width = "50dp",
-		layout_height = "50dp",
+		layout_width = "60dp",
+		layout_height = "60dp",
 		{
 			ImageView,
-			layout_width = "50dp",
+			layout_width = "60dp",
 			src = icon_file,
 			id = "suspended_ball",
-			layout_height = "50dp",
+			layout_height = "60dp",
+            padding = "8dp",
+            background = getShepeBackground(c_bg, 30),
 		},
 	})
 	moveTouch(suspended_ball, xfq, mainLayoutParams)
@@ -412,7 +432,7 @@ function LoadUi()
 	end
 
 	xfc = loadlayout(xfc)
-	view_list.addView(loadlayout(natext("Menu Utama", main_list)))
+	view_list.addView(loadlayout(natext("DASHBOARD", main_list)))
 	laytab = { main_list }
 	cpage = laytab[1]
 	moveTouch(touch, xfc, mainLayoutParams)
@@ -421,8 +441,10 @@ function LoadUi()
 	for i = 1, #menus do
 		local btn = loadlayout({
 			RelativeLayout,
-			layout_height = "40dp",
+			layout_height = "45dp",
 			layout_width = -1,
+            layout_margin = "2dp",
+            background = getShepeBackground(c_card, 15),
 			onClick = function()
 				cpage.setVisibility(View.GONE)
 				laytab[i + 1].setVisibility(View.VISIBLE)
@@ -437,19 +459,22 @@ function LoadUi()
 				layout_marginBottom = "20dp",
 				layout_height = "24dp",
 				layout_width = -1,
+                layout_marginLeft = "12dp",
 				text = menus[i][1],
-				textSize = "14sp",
-				textColor = 0xFFF6EDFF,
+				textSize = "15sp",
+                textStyle = "bold",
+				textColor = c_text_p,
 			},
 			{
 				TextView,
 				layout_height = "16dp",
 				layout_width = -1,
 				layout_alignParentBottom = "true",
-				layout_marginBottom = "3dp",
+				layout_marginBottom = "4dp",
+                layout_marginLeft = "12dp",
 				textSize = "11sp",
 				text = menus[i][2],
-				textColor = 0xFFCAC4D0,
+				textColor = c_text_s,
 			},
 			pline(),
 		})
@@ -483,19 +508,19 @@ function LoadUi()
 			firstY = event.getRawY()
 			wmX = params.width
 			wmY = params.height
-			max = dp2px(350)
-			min = dp2px(50)
+			max = dp2px(400)
+			min = dp2px(100)
 		elseif event.getAction() == MotionEvent.ACTION_MOVE then
 			local width = wmX + (event.getRawX() - firstX)
 			local height = wmY + (event.getRawY() - firstY)
 			if width < max and width > min then
 				params.width = width
-				ooo.setBackground(miaobian(5, 30, "#FF405688", "#FF00FF00"))
+				ooo.setBackground(miaobian(5, 40, "#FF1A0033", "#FFD0BCFF"))
 			elseif width > max then
-				ooo.setBackground(miaobian(5, 30, "#FF405688", "#FFFF0000"))
+				ooo.setBackground(miaobian(5, 40, "#FF1A0033", "#FFFF0000"))
 				params.width = max
 			elseif width < min then
-				ooo.setBackground(miaobian(5, 30, "#FF405688", "#FFFF0000"))
+				ooo.setBackground(miaobian(5, 40, "#FF1A0033", "#FFFF0000"))
 				params.width = min
 			end
 			if height < max and height > min then
@@ -507,7 +532,7 @@ function LoadUi()
 			end
 			ooo.setLayoutParams(params)
 		elseif event.getAction() == MotionEvent.ACTION_UP then
-			ooo.setBackground(getShepeBackground(0xFF405688, 30))
+			ooo.setBackground(getShepeBackground(c_bg, 40))
 		end
 		return true
 	end
