@@ -1,68 +1,69 @@
 -- 支持ELGG修改器，作者：VellMod / Stylish Upgrade
 -- Modern Stylish Purple Mod Menu UI for ELGG
 
+gg.toast("Starting script...")
+
 local 悬浮窗图标外链 = "https://files.catbox.moe/mbkj32.png"
-local 资源文件夹 = "/sdcard/.vlx_purple/"
+local 资源文件夹 = "/sdcard/.vlx/"
 
--- Color Palette
-local c_bg = 0xFF1A0033        -- Deep Purple Background
-local c_card = 0xFF2D0054      -- Lighter Purple Card
-local c_accent = 0xFFD0BCFF    -- Lavender Accent
-local c_stroke = 0xFF6A1B9A    -- Rich Purple Stroke
-local c_text_p = 0xFFFFFFFF    -- White Text
-local c_text_s = 0xFFCAC4D0    -- Secondary Lavender Text
+-- Theme Colors (Strings for Color.parseColor)
+local PURPLE_BG = "#FF1A0033"
+local PURPLE_CARD = "#FF2D0054"
+local PURPLE_ACCENT = "#FFD0BCFF"
+local PURPLE_STROKE = "#FF6A1B9A"
+local TEXT_PRIMARY = "#FFFFFFFF"
+local TEXT_SECONDARY = "#FFCAC4D0"
 
-local check_file = file.new(资源文件夹)
-if not check_file.isDirectory() then
-	check_file.delete()
-	check_file.mkdir()
-end
+-- Resource Initialization
+pcall(function()
+    local check_file = file.new(资源文件夹)
+    if not check_file.isDirectory() then
+        check_file.delete()
+        check_file.mkdir()
+    end
+end)
 
--- Resources
-local icon_file = 资源文件夹 .. "icon.png"
-local exit_path = 资源文件夹 .. "exit.png"
-local hide_path = 资源文件夹 .. "hide.png"
-local enlarge_path = 资源文件夹 .. "enlarge.png"
-local shrink_path = 资源文件夹 .. "shrink.png"
+local icon_file = 资源文件夹 .. "图标.png"
+local exit_path = 资源文件夹 .. "退出.png"
+local hide_path = 资源文件夹 .. "隐藏.png"
+local enlarge_path = 资源文件夹 .. "放大.png"
+local shrink_path = 资源文件夹 .. "缩小.png"
 
+-- Download Assets if missing
 if not file.new(icon_file).exists() then
-	file.download(悬浮窗图标外链, icon_file)
-	file.download("https://www.xiaoman.top/assets/users/VellMod/exit.png", exit_path)
-	file.download("https://www.xiaoman.top/assets/users/VellMod/hide.png", hide_path)
-	file.download("https://www.xiaoman.top/assets/users/VellMod/enlarge.png", enlarge_path)
-	file.download("https://www.xiaoman.top/assets/users/VellMod/shrink.png", shrink_path)
+    gg.toast("Downloading assets...")
+    pcall(function()
+        file.download(悬浮窗图标外链, icon_file)
+        file.download("https://www.xiaoman.top/assets/users/VellMod/exit.png", exit_path)
+        file.download("https://www.xiaoman.top/assets/users/VellMod/hide.png", hide_path)
+        file.download("https://www.xiaoman.top/assets/users/VellMod/enlarge.png", enlarge_path)
+        file.download("https://www.xiaoman.top/assets/users/VellMod/shrink.png", shrink_path)
+    end)
 end
 
--- Stylish Menus
+-- Menus Structure
 menus = {
-	{ "MOVEMENT", "Hacks related to player movement.",
+	{ "MOVEMENT", "Hacks for player speed and jumping.",
 		{
-			{ "s", "Speed Hack (2.0x)", "Fast movement speed",
+			{ "s", "Speed Hack (2.0x)", "Toggle 2x speed boost",
                 open = function() gg.setSpeed(2.0) gg.toast("Speed Boost: ON") end,
                 close = function() gg.setSpeed(1.0) gg.toast("Speed Boost: OFF") end
             },
-			{ "s", "Jump Hack (High)", "Increased jump height",
-                open = function() gg.toast("Jump Hack Enabled") end,
-                close = function() gg.toast("Jump Hack Disabled") end
-            },
+			{ "t", "Super Jump", "Enhanced jump height (Mock)", function() gg.alert("Jump Hack Applied") end },
 		}
 	},
-	{ "VISUALS", "Enhance game visuals and ESP.",
+	{ "VISUALS", "Hacks for game visibility and Chams.",
 		{
-			{ "t", "Full Bright", "Remove shadows and fog", function() gg.alert("Visual Hack Applied") end },
 			{ "s", "Chams (Rainbow)", "Colored player models",
-                open = function() gg.toast("Chams: Rainbow") end,
+                open = function() gg.toast("Chams: ON") end,
                 close = function() gg.toast("Chams: OFF") end
             },
-		}
-	},
-    { "SETTINGS", "Menu and script configurations.",
-		{
-			{ "t", "Reset All", "Restore default game state", function() gg.setSpeed(1.0) gg.toast("Restored Defaults") end },
+			{ "t", "Brightness", "Remove game fog", function() gg.toast("Brightness Hack Enabled") end },
 		}
 	},
 }
 
+-- Native Imports
 import "android.app.*"
 import "android.os.*"
 import "android.widget.*"
@@ -79,8 +80,13 @@ context = activity
 window = context.getSystemService("window")
 
 xfc_large = false
-ooo1 = tonumber(device.getWidth)
-ooo2 = tonumber(device.getHeight)
+-- Handle potential method vs property for device dimensions
+local devW = device.getWidth
+local devH = device.getHeight
+if type(devW) == "function" then devW = devW() end
+if type(devH) == "function" then devH = devH() end
+ooo1 = tonumber(devW) or 1080
+ooo2 = tonumber(devH) or 1920
 
 function getLayoutParams(flag)
 	local LayoutParams = WindowManager.LayoutParams
@@ -131,7 +137,6 @@ function costimg(id, src, func, pad)
 		layout_width = -1,
 		layout_weight = "4.1",
 		src = src,
-		ColorFilter = c_accent,
 		padding = pad,
 		onClick = function() pcall(func) end,
 		id = id,
@@ -152,9 +157,9 @@ function threadStart(runnable)
 end
 
 function getShepeBackground(color, radiu)
-	drawable = luajava.new(GradientDrawable)
+	local drawable = luajava.new(GradientDrawable)
 	drawable.setShape(GradientDrawable.RECTANGLE)
-	drawable.setColor(color)
+	drawable.setColor(Color.parseColor(color))
 	drawable.setCornerRadii({ radiu, radiu, radiu, radiu, radiu, radiu, radiu, radiu })
 	return drawable
 end
@@ -171,7 +176,7 @@ function natext(text, lay)
 		selected = true,
 		singleLine = true,
 		textSize = "13sp",
-		textColor = c_text_s,
+		textColor = Color.parseColor(PURPLE_ACCENT),
 		onClick = function()
 			cpage.setVisibility(View.GONE)
 			lay.setVisibility(View.VISIBLE)
@@ -186,7 +191,7 @@ function pline()
 		View,
 		layout_width = -1,
 		layout_height = "1dp",
-		background = getShepeBackground(c_stroke, 10),
+		background = getShepeBackground(PURPLE_STROKE, 10),
 		layout_alignParentBottom = "true",
 	}
 end
@@ -195,13 +200,13 @@ function VellMod_switch(ojbk, parent)
 	local sw = loadlayout({
 		Switch,
 		text = ojbk[2],
-		textColor = c_text_p,
+		textColor = Color.parseColor(TEXT_PRIMARY),
 		padding = "8dp",
 		layout_width = -1,
 		layout_height = "45dp",
 	})
-	sw.ThumbDrawable.setColorFilter(PorterDuffColorFilter(c_accent, PorterDuff.Mode.SRC_ATOP))
-	sw.TrackDrawable.setColorFilter(PorterDuffColorFilter(c_stroke, PorterDuff.Mode.SRC_ATOP))
+	sw.ThumbDrawable.setColorFilter(PorterDuffColorFilter(Color.parseColor(PURPLE_ACCENT), PorterDuff.Mode.SRC_ATOP))
+	sw.TrackDrawable.setColorFilter(PorterDuffColorFilter(Color.parseColor(PURPLE_STROKE), PorterDuff.Mode.SRC_ATOP))
 	sw.onClick = function()
 		local mode = sw.checked and "open" or "close"
 		threadStart({
@@ -215,9 +220,7 @@ function VellMod_switch(ojbk, parent)
 		View,
 		layout_width = -1,
 		layout_height = "1dp",
-		background = getShepeBackground(c_stroke, 10),
-        layout_marginLeft = "10dp",
-        layout_marginRight = "10dp"
+		background = getShepeBackground(PURPLE_STROKE, 10)
 	}))
 end
 
@@ -226,7 +229,6 @@ function VellMod_text(ojbk, parent)
 		RelativeLayout,
 		layout_height = "45dp",
 		layout_width = -1,
-        layout_margin = "2dp",
 		onClick = function()
 			threadStart({
 				run = function()
@@ -240,10 +242,9 @@ function VellMod_text(ojbk, parent)
 			layout_marginBottom = "20dp",
 			layout_height = "24dp",
 			layout_width = -1,
-            layout_marginLeft = "8dp",
 			text = ojbk[2],
 			textSize = "14sp",
-			textColor = c_text_p,
+			textColor = Color.parseColor(TEXT_PRIMARY),
 		},
 		{
 			TextView,
@@ -251,17 +252,16 @@ function VellMod_text(ojbk, parent)
 			layout_width = -1,
 			layout_alignParentTop = "true",
 			layout_marginTop = "19dp",
-            layout_marginLeft = "8dp",
 			textSize = "11sp",
 			text = ojbk[3],
-			textColor = c_text_s,
+			textColor = Color.parseColor(TEXT_SECONDARY),
 		},
 		pline(),
 	})
 	parent.addView(btn)
 end
 
-xfc = {
+xfc_table = {
 	LinearLayout,
 	layout_height = "fill",
 	layout_width = "fill",
@@ -270,37 +270,34 @@ xfc = {
 		RelativeLayout,
 		layout_height = "340dp",
 		layout_width = "280dp",
-		background = getShepeBackground(c_bg, 40),
+		background = getShepeBackground(PURPLE_BG, 40),
 		id = "ooo",
 		{
 			LinearLayout,
 			layout_height = -1,
 			orientation = "vertical",
-			layout_margin = "12dp",
+			layout_margin = "10dp",
 			layout_width = -1,
 			{
-				LinearLayout, -- Top Bar
+				LinearLayout,
 				layout_height = "45dp",
 				orientation = "horizontal",
 				layout_width = -1,
 				gravity = "center",
-                background = getShepeBackground(c_card, 20),
-                layout_marginBottom = "10dp",
 				{
 					ImageView,
 					layout_width = -1,
 					layout_height = -1,
-					layout_weight = "4.5",
+					layout_weight = "4.1",
 					id = "logo",
 					src = icon_file,
 				},
 				{
 					TextView,
-					textColor = c_accent,
-					text = "VELLIX AO",
+					textColor = Color.parseColor(PURPLE_ACCENT),
+					text = "VellMod",
 					gravity = "center",
 					textSize = "16sp",
-                    textStyle = "bold",
 					layout_height = -1,
 					layout_width = -1,
 					layout_weight = "3.2",
@@ -335,13 +332,13 @@ xfc = {
 				end, "5dp"),
 			},
 			{
-				LinearLayout, -- Navigation
-				layout_height = "40dp",
+				LinearLayout,
+				layout_height = "38dp",
 				layout_width = -1,
 				orientation = "vertical",
 				{
 					LinearLayout,
-					layout_height = "38dp",
+					layout_height = "35dp",
 					layout_width = -1,
 					{
 						TextView,
@@ -356,7 +353,7 @@ xfc = {
 							if coumt > 1 then
 								view_list.removeViewAt(coumt - 1)
 							else
-								gg.toast("Back to Main Menu")
+								gg.toast("At root menu")
 							end
 						end,
 					},
@@ -384,7 +381,7 @@ xfc = {
 					RelativeLayout,
 					layout_height = -1,
 					layout_width = -1,
-					layout_margin = "4dp",
+					layout_margin = "3dp",
 					id = "funclayout",
 					{
 						LinearLayout,
@@ -408,6 +405,7 @@ xfc = {
 }
 
 function LoadUi()
+    gg.toast("Initializing UI...")
 	local LayoutParams = WindowManager.LayoutParams
 	mainLayoutParams = getLayoutParams(LayoutParams.FLAG_NOT_FOCUSABLE)
 
@@ -421,17 +419,18 @@ function LoadUi()
 			src = icon_file,
 			id = "suspended_ball",
 			layout_height = "60dp",
-            padding = "8dp",
-            background = getShepeBackground(c_bg, 30),
+            padding = "10dp",
 		},
 	})
+    xfq.setBackground(getShepeBackground(PURPLE_BG, 30))
+
 	moveTouch(suspended_ball, xfq, mainLayoutParams)
 	function suspended_ball.onClick()
 		window.removeView(xfq)
 		window.addView(xfc, mainLayoutParams)
 	end
 
-	xfc = loadlayout(xfc)
+	xfc = loadlayout(xfc_table)
 	view_list.addView(loadlayout(natext("DASHBOARD", main_list)))
 	laytab = { main_list }
 	cpage = laytab[1]
@@ -443,8 +442,8 @@ function LoadUi()
 			RelativeLayout,
 			layout_height = "45dp",
 			layout_width = -1,
+            background = getShepeBackground(PURPLE_CARD, 15),
             layout_margin = "2dp",
-            background = getShepeBackground(c_card, 15),
 			onClick = function()
 				cpage.setVisibility(View.GONE)
 				laytab[i + 1].setVisibility(View.VISIBLE)
@@ -459,11 +458,10 @@ function LoadUi()
 				layout_marginBottom = "20dp",
 				layout_height = "24dp",
 				layout_width = -1,
-                layout_marginLeft = "12dp",
+                layout_marginLeft = "10dp",
 				text = menus[i][1],
 				textSize = "15sp",
-                textStyle = "bold",
-				textColor = c_text_p,
+				textColor = Color.parseColor(TEXT_PRIMARY),
 			},
 			{
 				TextView,
@@ -471,10 +469,10 @@ function LoadUi()
 				layout_width = -1,
 				layout_alignParentBottom = "true",
 				layout_marginBottom = "4dp",
-                layout_marginLeft = "12dp",
+                layout_marginLeft = "10dp",
 				textSize = "11sp",
 				text = menus[i][2],
-				textColor = c_text_s,
+				textColor = Color.parseColor(TEXT_SECONDARY),
 			},
 			pline(),
 		})
@@ -508,19 +506,19 @@ function LoadUi()
 			firstY = event.getRawY()
 			wmX = params.width
 			wmY = params.height
-			max = dp2px(400)
-			min = dp2px(100)
+			max = dp2px(350)
+			min = dp2px(50)
 		elseif event.getAction() == MotionEvent.ACTION_MOVE then
 			local width = wmX + (event.getRawX() - firstX)
 			local height = wmY + (event.getRawY() - firstY)
 			if width < max and width > min then
 				params.width = width
-				ooo.setBackground(miaobian(5, 40, "#FF1A0033", "#FFD0BCFF"))
+				ooo.setBackground(miaobian(5, 40, PURPLE_BG, PURPLE_ACCENT))
 			elseif width > max then
-				ooo.setBackground(miaobian(5, 40, "#FF1A0033", "#FFFF0000"))
+				ooo.setBackground(miaobian(5, 40, PURPLE_BG, "#FFFF0000"))
 				params.width = max
 			elseif width < min then
-				ooo.setBackground(miaobian(5, 40, "#FF1A0033", "#FFFF0000"))
+				ooo.setBackground(miaobian(5, 40, PURPLE_BG, "#FFFF0000"))
 				params.width = min
 			end
 			if height < max and height > min then
@@ -532,17 +530,27 @@ function LoadUi()
 			end
 			ooo.setLayoutParams(params)
 		elseif event.getAction() == MotionEvent.ACTION_UP then
-			ooo.setBackground(getShepeBackground(c_bg, 40))
+			ooo.setBackground(getShepeBackground(PURPLE_BG, 40))
 		end
 		return true
 	end
 
 	window.addView(xfq, mainLayoutParams)
+    gg.toast("Menu Ready! Click the icon to open.")
 end
 
-Lock.Ui(LoadUi, nil, function(err)
-	print(err)
-	luajava.exit()
-end)
+-- Use Lock.Ui safely
+if Lock and Lock.Ui then
+    Lock.Ui(LoadUi, nil, function(err)
+        print("ELGG UI Error: " .. err)
+        luajava.exit()
+    end)
+else
+    -- Fallback attempt
+    pcall(LoadUi)
+end
 
-os.exit()
+-- Keep alive loop (Prevents instant exit if Lock.Ui is not blocking)
+while true do
+    gg.sleep(5000)
+end
