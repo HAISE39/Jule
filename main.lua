@@ -1,63 +1,64 @@
--- Simple ELGG Mod Menu using ImGui
--- Required: ELGG version >= 1.2.5
+-- main.lua - ELGG Mod Menu Bootstrap
+-- Author: VellMod / Adapted for Modular Structure
 
-loadImGui() -- Load ImGui library
-ImGui.InitWindow()
-ImGui.InitImGui()
+local logic = require("logic")
+local ui = require("ui")
 
--- Variables to store feature states
-local speedHackActive = false
-local wallhackActive = false
+-- 1. Configuration & Resources
+local 资源文件夹 = "/sdcard/.vlx/"
+local icon_file = 资源文件夹 .. "图标.png"
+local exit_path = 资源文件夹 .. "退出.png"
 
-gg.toast("ELGG Mod Menu Loaded")
+local check_file = file.new(资源文件夹)
+if not check_file.isDirectory() then
+    check_file.delete()
+    check_file.mkdir()
+end
 
+-- 2. Resource Management
+if not file.new(icon_file).exists() then
+    gg.toast("Downloading resources...")
+    file.download("https://files.catbox.moe/mbkj32.png", icon_file)
+    file.download("https://www.xiaoman.top/assets/users/VellMod/exit.png", exit_path)
+end
+
+-- 3. Menu Definition (Linked to logic.lua)
+local menus = {
+    { "Movement Hacks", "Speed and movement related hacks",
+        {
+            { "s", "Speed Hack", "Toggle 2.5x Speed",
+                open = function() logic.toggleSpeed(true) end,
+                close = function() logic.toggleSpeed(false) end
+            },
+        }
+    },
+    { "Miscellaneous", "Other useful features",
+        {
+            { "t", "Test Alert", "Shows a simple alert", function() logic.feature1() end },
+        }
+    },
+}
+
+-- 4. Initialization
+local function start()
+    ui.init(menus, {
+        icon = icon_file,
+        exit = exit_path
+    })
+end
+
+-- Use ELGG's UI safe wrapper if available
+if Lock and Lock.Ui then
+    Lock.Ui(start, nil, function(err)
+        print("ELGG UI Error: " .. err)
+        luajava.exit()
+    end)
+else
+    -- Fallback for standard environments
+    start()
+end
+
+-- Keep script running
 while true do
-    ImGui.NewFrame()
-
-    -- Set window position and size (Once)
-    local viewport = ImGui.GetMainViewport()
-    local vec2Pos = ImVec2(viewport.WorkPos.x + 100, viewport.WorkPos.y + 100)
-    local vec2Size = ImVec2(400, 300)
-
-    ImGui.SetNextWindowPos(vec2Pos, 1 << 2) -- ImGuiCond_FirstUseEver
-    ImGui.SetNextWindowSize(vec2Size, 1 << 2)
-
-    -- Begin the Mod Menu window
-    if ImGui.Begin("ELGG Simple Mod Menu") then
-        ImGui.Text("Welcome to ELGG!")
-        ImGui.Text("Modern & Simple UI")
-        ImGui.Separator()
-
-        -- Feature: Speed Hack
-        local oldSpeed = speedHackActive
-        speedHackActive = ImGui.Checkbox("Speed Hack (2.0x)", speedHackActive)
-        if speedHackActive ~= oldSpeed then
-            if speedHackActive then
-                gg.setSpeed(2.0)
-                gg.toast("Speed Hack: ON")
-            else
-                gg.setSpeed(1.0)
-                gg.toast("Speed Hack: OFF")
-            end
-        end
-
-        -- Feature: Wallhack (Mock Logic)
-        wallhackActive = ImGui.Checkbox("Wallhack (Mock)", wallhackActive)
-        if ImGui.IsItemHovered() then
-            ImGui.SetTooltip("This is a placeholder for Wallhack logic.")
-        end
-
-        ImGui.Spacing()
-        ImGui.Separator()
-
-        -- Exit Button
-        if ImGui.Button("Exit Script", ImVec2(100, 40)) then
-            gg.toast("Exiting ELGG Script...")
-            os.exit()
-        end
-
-        ImGui.End()
-    end
-
-    ImGui.Render()
+    gg.sleep(1000)
 end
