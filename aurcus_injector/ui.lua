@@ -6,15 +6,18 @@ import "android.view.*"
 import "android.graphics.drawable.*"
 import "android.content.*"
 
+-- --- UI Module ---
+-- Handles the floating window and modern mod menu interface
+
 local wm, lp, iconView, menuView
 local statusText
 
--- Helper: Rounded Background
+-- Helper: Rounded Background with Border
 local function getBackground(color, radius)
   local gd = GradientDrawable()
   gd.setColor(color)
   gd.setCornerRadius(radius)
-  gd.setStroke(2, 0xFF00FF00) -- Green border
+  gd.setStroke(3, 0xFF00FF00) -- Professional Green border
   return gd
 end
 
@@ -30,35 +33,35 @@ function ui.start()
   lp.x = 100
   lp.y = 300
 
-  -- 1. Floating Icon
+  -- 1. Floating Icon Layout
   local iconLayout = {
     LinearLayout,
-    layout_width="50dp",
-    layout_height="50dp",
+    layout_width="55dp",
+    layout_height="55dp",
     gravity="center",
     {
       TextView,
       text="V",
       textColor="#00FF00",
-      textSize="24sp",
+      textSize="26sp",
       textStyle="bold",
     }
   }
   iconView = loadlayout(iconLayout)
-  iconView.setBackground(getBackground(0xCC000000, 25))
+  iconView.setBackground(getBackground(0xCC000000, 27))
 
-  -- 2. Mod Menu
+  -- 2. Modern Mod Menu Layout
   local menuLayout = {
     LinearLayout,
     orientation="vertical",
-    layout_width="280dp",
+    layout_width="300dp",
     layout_height="wrap_content",
-    padding="16dp",
+    padding="20dp",
     {
       TextView,
-      text="VELLIXAO - AURCUS",
+      text="VELLIXAO - AURCUS INJECTOR",
       textColor="#00FF00",
-      textSize="18sp",
+      textSize="20sp",
       textStyle="bold",
       gravity="center",
       layout_width="fill",
@@ -66,24 +69,24 @@ function ui.start()
     {
       TextView,
       id="status",
-      text="Status: Ready",
-      textColor="#AAAAAA",
-      textSize="12sp",
+      text="Status: System Initialized",
+      textColor="#CCCCCC",
+      textSize="13sp",
       gravity="center",
-      layout_marginTop="4dp",
+      layout_marginTop="6dp",
       layout_width="fill",
     },
     {
       LinearLayout,
       orientation="horizontal",
       layout_width="fill",
-      layout_marginTop="16dp",
+      layout_marginTop="20dp",
       gravity="center_vertical",
       {
         TextView,
         text="Refresh Skill",
         textColor="#FFFFFF",
-        textSize="16sp",
+        textSize="17sp",
         layout_weight=1,
       },
       {
@@ -94,21 +97,24 @@ function ui.start()
     {
       Button,
       id="btnHide",
-      text="HIDE MENU",
+      text="MINIMIZE MENU",
       textColor="#FFFFFF",
-      layout_marginTop="20dp",
+      layout_marginTop="25dp",
       layout_width="fill",
     },
   }
-  menuView = loadlayout(menuLayout)
-  menuView.setBackground(getBackground(0xEE111111, 40))
 
-  -- Internal Refs
-  statusText = menuView.findViewById("status")
-  local btnSkill = menuView.findViewById("btnSkill")
-  local btnHide = menuView.findViewById("btnHide")
+  -- Correct ID Retrieval in AndLua+
+  local ids = {}
+  menuView = loadlayout(menuLayout, ids)
+  menuView.setBackground(getBackground(0xEE111111, 45))
 
-  -- --- Actions ---
+  -- Internal References from ID table
+  statusText = ids.status
+  local btnSkill = ids.btnSkill
+  local btnHide = ids.btnHide
+
+  -- --- Interactivity ---
 
   local isMenuVisible = false
 
@@ -126,7 +132,7 @@ function ui.start()
   iconView.onClick = toggle
   btnHide.onClick = toggle
 
-  -- Dragging
+  -- Dragging Logic for both Icon and Menu
   local startX, startY, initialX, initialY
   local function handleTouch(v, e)
     if e.getAction() == MotionEvent.ACTION_DOWN then
@@ -144,7 +150,7 @@ function ui.start()
   iconView.onTouch = handleTouch
   menuView.onTouch = handleTouch
 
-  -- Hack Implementation
+  -- Feature Logic Binding
   btnSkill.onCheckedChange = function(v, isChecked)
     local logic = require("logic")
     logic.runRefreshSkill(isChecked, function(msg)
@@ -152,7 +158,7 @@ function ui.start()
     end)
   end
 
-  -- Start with Icon
+  -- Initial Deployment: Floating Icon
   wm.addView(iconView, lp)
 end
 
