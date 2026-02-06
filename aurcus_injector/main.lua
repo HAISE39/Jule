@@ -175,23 +175,38 @@ local function runRefreshSkill(enabled)
 
   thread(function()
     local memory = require("memory")
-    call(function() statusText.setText("Status: Scanning Skill...") end)
+    call(function() statusText.setText("Status: Searching...") end)
 
     -- Pattern 3;81;20 (Dword)
     local pattern = "3;81;20"
     local results = memory.search(pattern, "Dword")
 
     if #results > 0 then
-      -- Edit 3 (offset 0) to 25
+      -- Apply modification: Change 3 to 25
       memory.writeBatch(results, "25", 0, "Dword")
+
+      -- Verification Step
+      local verifiedCount = 0
+      for _, addr in ipairs(results) do
+        local val = memory.read(addr, "Dword")
+        if val == 25 then
+          verifiedCount = verifiedCount + 1
+        end
+      end
+
       call(function()
-        statusText.setText("Status: Skill Refreshed ("..#results..")")
-        Toast.makeText(activity, "Refresh Skill Applied!", Toast.LENGTH_SHORT).show()
+        if verifiedCount > 0 then
+          statusText.setText("Status: Applied ("..verifiedCount.."/"..#results.." verified)")
+          Toast.makeText(activity, "Refresh Skill Applied!", Toast.LENGTH_SHORT).show()
+        else
+          statusText.setText("Status: Write Failed (Check Permissions)")
+          Toast.makeText(activity, "Write Failed!", Toast.LENGTH_LONG).show()
+        end
       end)
     else
       call(function()
-        statusText.setText("Status: Skill Not Found")
-        Toast.makeText(activity, "Refresh Skill Failed", Toast.LENGTH_SHORT).show()
+        statusText.setText("Status: Pattern Not Found")
+        Toast.makeText(activity, "Skill Pattern Not Found!", Toast.LENGTH_SHORT).show()
       end)
     end
   end)
