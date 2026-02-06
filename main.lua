@@ -1,18 +1,19 @@
 -- 支持ELGG修改器，作者：VellMod / Stylish Upgrade
--- Modern Stylish Purple Mod Menu UI for ELGG
+-- Modern Sidebar UI for ELGG based on DKTool style
 
 gg.toast("Starting script...")
 
 local 悬浮窗图标外链 = "https://files.catbox.moe/mbkj32.png"
 local 资源文件夹 = "/sdcard/.vlx/"
 
--- Theme Colors (Strings for Color.parseColor)
-local PURPLE_BG = "#FF1A0033"
-local PURPLE_CARD = "#FF2D0054"
-local PURPLE_ACCENT = "#FFD0BCFF"
-local PURPLE_STROKE = "#FF6A1B9A"
-local TEXT_PRIMARY = "#FFFFFFFF"
-local TEXT_SECONDARY = "#FFCAC4D0"
+-- Theme Colors (Modern Dark with Purple Accents)
+local COLOR_BG = "#FF0A0A0A"
+local COLOR_SIDEBAR = "#FF141414"
+local COLOR_CARD = "#FF1E1E1E"
+local COLOR_ACCENT = "#FFBB86FC"
+local COLOR_TEXT_PRIMARY = "#FFFFFFFF"
+local COLOR_TEXT_SECONDARY = "#FFB0B0B0"
+local COLOR_BORDER = "#40FFFFFF"
 
 -- Resource Initialization
 pcall(function()
@@ -25,9 +26,6 @@ end)
 
 local icon_file = 资源文件夹 .. "图标.png"
 local exit_path = 资源文件夹 .. "退出.png"
-local hide_path = 资源文件夹 .. "隐藏.png"
-local enlarge_path = 资源文件夹 .. "放大.png"
-local shrink_path = 资源文件夹 .. "缩小.png"
 
 -- Download Assets if missing
 if not file.new(icon_file).exists() then
@@ -35,32 +33,33 @@ if not file.new(icon_file).exists() then
     pcall(function()
         file.download(悬浮窗图标外链, icon_file)
         file.download("https://www.xiaoman.top/assets/users/VellMod/exit.png", exit_path)
-        file.download("https://www.xiaoman.top/assets/users/VellMod/hide.png", hide_path)
-        file.download("https://www.xiaoman.top/assets/users/VellMod/enlarge.png", enlarge_path)
-        file.download("https://www.xiaoman.top/assets/users/VellMod/shrink.png", shrink_path)
     end)
 end
 
 -- Menus Structure
 menus = {
-	{ "MOVEMENT", "Hacks for player speed and jumping.",
+	{ "实用功能", "Practical features for gameplay.",
 		{
-			{ "s", "Speed Hack (2.0x)", "Toggle 2x speed boost",
-                open = function() gg.setSpeed(2.0) gg.toast("Speed Boost: ON") end,
-                close = function() gg.setSpeed(1.0) gg.toast("Speed Boost: OFF") end
+			{ "s", "每日任务", "Daily tasks automation",
+                open = function() gg.toast("Daily Tasks: ON") end,
+                close = function() gg.toast("Daily Tasks: OFF") end
             },
-			{ "t", "Super Jump", "Enhanced jump height (Mock)", function() gg.alert("Jump Hack Applied") end },
+			{ "t", "原地光翼", "Teleport to light wings", function() gg.toast("Teleporting...") end },
 		}
 	},
-	{ "VISUALS", "Hacks for game visibility and Chams.",
+	{ "娱乐功能", "Fun and visual modifications.",
 		{
-			{ "s", "Chams (Rainbow)", "Colored player models",
-                open = function() gg.toast("Chams: ON") end,
-                close = function() gg.toast("Chams: OFF") end
+			{ "s", "离线模式", "Play without connection",
+                open = function() gg.toast("Offline Mode: ON") end,
+                close = function() gg.toast("Offline Mode: OFF") end
             },
-			{ "t", "Brightness", "Remove game fog", function() gg.toast("Brightness Hack Enabled") end },
+			{ "t", "无限能量", "Infinite energy usage", function() gg.toast("Energy locked") end },
 		}
 	},
+    { "列表菜单", "List of extra options.", {} },
+    { "附加功能", "Additional utility tools.", {} },
+    { "弹琴菜单", "Music and instruments.", {} },
+    { "设置菜单", "Configuration and settings.", {} },
 }
 
 -- Native Imports
@@ -79,7 +78,6 @@ import "android.graphics.drawable.*"
 context = activity
 window = context.getSystemService("window")
 
-xfc_large = false
 -- Handle potential method vs property for device dimensions
 local devW = device.getWidth
 local devH = device.getHeight
@@ -120,28 +118,15 @@ function moveTouch(id, lay, params)
 	end
 end
 
-function miaobian(d, r, t, y)
-	local InsideColor = Color.parseColor(t)
-	local drawable = GradientDrawable()
+function getShepeBackground(color, radiu, strokeWidth, strokeColor)
+	local drawable = luajava.new(GradientDrawable)
 	drawable.setShape(GradientDrawable.RECTANGLE)
-	drawable.setColor(InsideColor)
-	drawable.setCornerRadii({ r, r, r, r, r, r, r, r });
-	drawable.setStroke(d, Color.parseColor(y))
+	drawable.setColor(Color.parseColor(color))
+	drawable.setCornerRadii({ radiu, radiu, radiu, radiu, radiu, radiu, radiu, radiu })
+    if strokeWidth and strokeColor then
+        drawable.setStroke(strokeWidth, Color.parseColor(strokeColor))
+    end
 	return drawable
-end
-
-function costimg(id, src, func, pad)
-	local sw = {
-		ImageView,
-		layout_height = -1,
-		layout_width = -1,
-		layout_weight = "4.1",
-		src = src,
-		padding = pad,
-		onClick = function() pcall(func) end,
-		id = id,
-	}
-	return sw
 end
 
 function dp2px(dpValue)
@@ -156,59 +141,30 @@ function threadStart(runnable)
 	return subThread
 end
 
-function getShepeBackground(color, radiu)
-	local drawable = luajava.new(GradientDrawable)
-	drawable.setShape(GradientDrawable.RECTANGLE)
-	drawable.setColor(Color.parseColor(color))
-	drawable.setCornerRadii({ radiu, radiu, radiu, radiu, radiu, radiu, radiu, radiu })
-	return drawable
-end
-
-function natext(text, lay)
-	local sw = {
-		TextView,
-		text = text,
-		gravity = "center",
-		layout_width = "90dp",
-		layout_height = -1,
-		padding = "5dp",
-		ellipsize = "marquee",
-		selected = true,
-		singleLine = true,
-		textSize = "13sp",
-		textColor = Color.parseColor(PURPLE_ACCENT),
-		onClick = function()
-			cpage.setVisibility(View.GONE)
-			lay.setVisibility(View.VISIBLE)
-			cpage = lay
-		end
-	}
-	return sw
-end
-
-function pline()
-	return {
-		View,
-		layout_width = -1,
-		layout_height = "1dp",
-		background = getShepeBackground(PURPLE_STROKE, 10),
-		layout_alignParentBottom = "true",
-	}
-end
-
 function VellMod_switch(ojbk, parent)
 	local sw = loadlayout({
-		Switch,
-		text = ojbk[2],
-		textColor = Color.parseColor(TEXT_PRIMARY),
-		padding = "8dp",
-		layout_width = -1,
-		layout_height = "45dp",
+		LinearLayout,
+        orientation = "horizontal",
+        layout_width = -1,
+        layout_height = "50dp",
+        gravity = "center_vertical",
+        padding = "10dp",
+        {
+            TextView,
+            text = ojbk[2],
+            textColor = Color.parseColor(COLOR_TEXT_PRIMARY),
+            layout_weight = 1,
+            textSize = "14sp",
+        },
+        {
+            Switch,
+            id = "sw_btn",
+        }
 	})
-	sw.ThumbDrawable.setColorFilter(PorterDuffColorFilter(Color.parseColor(PURPLE_ACCENT), PorterDuff.Mode.SRC_ATOP))
-	sw.TrackDrawable.setColorFilter(PorterDuffColorFilter(Color.parseColor(PURPLE_STROKE), PorterDuff.Mode.SRC_ATOP))
-	sw.onClick = function()
-		local mode = sw.checked and "open" or "close"
+	sw_btn.ThumbDrawable.setColorFilter(PorterDuffColorFilter(Color.parseColor(COLOR_ACCENT), PorterDuff.Mode.SRC_ATOP))
+	sw_btn.TrackDrawable.setColorFilter(PorterDuffColorFilter(Color.parseColor(COLOR_TEXT_SECONDARY), PorterDuff.Mode.SRC_ATOP))
+	sw_btn.onClick = function()
+		local mode = sw_btn.checked and "open" or "close"
 		threadStart({
 			run = function()
 				pcall(ojbk[mode])
@@ -216,19 +172,18 @@ function VellMod_switch(ojbk, parent)
 		})
 	end
 	parent.addView(sw)
-	parent.addView(loadlayout({
-		View,
-		layout_width = -1,
-		layout_height = "1dp",
-		background = getShepeBackground(PURPLE_STROKE, 10)
-	}))
 end
 
 function VellMod_text(ojbk, parent)
 	local btn = loadlayout({
-		RelativeLayout,
+		Button,
 		layout_height = "45dp",
 		layout_width = -1,
+        layout_margin = "5dp",
+        background = getShepeBackground(COLOR_CARD, 10),
+        text = ojbk[2],
+        textColor = Color.parseColor(COLOR_TEXT_PRIMARY),
+        textAllCaps = false,
 		onClick = function()
 			threadStart({
 				run = function()
@@ -236,27 +191,6 @@ function VellMod_text(ojbk, parent)
 				end
 			})
 		end,
-		{
-			TextView,
-			layout_alignParentTop = "true",
-			layout_marginBottom = "20dp",
-			layout_height = "24dp",
-			layout_width = -1,
-			text = ojbk[2],
-			textSize = "14sp",
-			textColor = Color.parseColor(TEXT_PRIMARY),
-		},
-		{
-			TextView,
-			layout_height = "16dp",
-			layout_width = -1,
-			layout_alignParentTop = "true",
-			layout_marginTop = "19dp",
-			textSize = "11sp",
-			text = ojbk[3],
-			textColor = Color.parseColor(TEXT_SECONDARY),
-		},
-		pline(),
 	})
 	parent.addView(btn)
 end
@@ -267,145 +201,104 @@ xfc_table = {
 	layout_width = "fill",
 	id = "touch",
 	{
-		RelativeLayout,
-		layout_height = "340dp",
-		layout_width = "280dp",
-		background = getShepeBackground(PURPLE_BG, 40),
+		LinearLayout,
+        orientation = "horizontal",
+		layout_height = "350dp",
+		layout_width = "450dp",
+		background = getShepeBackground(COLOR_BG, 30),
 		id = "ooo",
-		{
-			LinearLayout,
-			layout_height = -1,
-			orientation = "vertical",
-			layout_margin = "10dp",
-			layout_width = -1,
-			{
-				LinearLayout,
-				layout_height = "45dp",
-				orientation = "horizontal",
-				layout_width = -1,
-				gravity = "center",
-				{
-					ImageView,
-					layout_width = -1,
-					layout_height = -1,
-					layout_weight = "4.1",
-					id = "logo",
-					src = icon_file,
-				},
-				{
-					TextView,
-					textColor = Color.parseColor(PURPLE_ACCENT),
-					text = "VellMod",
-					gravity = "center",
-					textSize = "16sp",
-					layout_height = -1,
-					layout_width = -1,
-					layout_weight = "3.2",
-				},
-				costimg("xfc_dx", enlarge_path, function()
-					if xfc_large == false then
-						lllayoutParams = ooo.getLayoutParams()
-						ooo1_jilu = lllayoutParams.width
-						ooo2_jilu = lllayoutParams.height
-						lllayoutParams.width = ooo1
-						lllayoutParams.height = ooo2
-						ooo.setLayoutParams(lllayoutParams)
-						xfc_large = true
-						xfc_dx.setImageDrawable(Drawable.createFromPath(shrink_path))
-					elseif xfc_large == true then
-						lllayoutParams = ooo.getLayoutParams()
-						lllayoutParams.width = ooo1_jilu
-						lllayoutParams.height = ooo2_jilu
-						ooo.setLayoutParams(lllayoutParams)
-						xfc_dx.setImageDrawable(Drawable.createFromPath(enlarge_path))
-						xfc_large = false
-					end
-				end, "10dp"),
-				costimg("xfc_yc", hide_path, function()
-					window.removeView(xfc)
-					window.addView(xfq, mainLayoutParams)
-				end, "5dp"),
-				costimg("xfc_exit", exit_path, function()
-					window.removeView(xfc)
-					luajava.exit()
-					os.exit()
-				end, "5dp"),
-			},
-			{
-				LinearLayout,
-				layout_height = "38dp",
-				layout_width = -1,
-				orientation = "vertical",
-				{
-					LinearLayout,
-					layout_height = "35dp",
-					layout_width = -1,
-					{
-						TextView,
-						text = "💜",
-						gravity = "center",
-						layout_width = "25dp",
-						textSize = "14sp",
-						layout_height = -1,
-						id = "page_delete",
-						onClick = function()
-							local coumt = view_list.getChildCount()
-							if coumt > 1 then
-								view_list.removeViewAt(coumt - 1)
-							else
-								gg.toast("At root menu")
-							end
-						end,
-					},
-					{
-						HorizontalScrollView,
-						layout_height = -1,
-						layout_width = -1,
-						horizontalScrollBarEnabled = false,
-						{
-							LinearLayout,
-							layout_height = -1,
-							orientation = "horizontal",
-							layout_width = -1,
-							id = "view_list",
-						},
-					},
-				},
-			},
-			{
-				ScrollView,
-				layout_width = -1,
-				layout_height = -1,
-				VerticalScrollBarEnabled = false,
-				{
-					RelativeLayout,
-					layout_height = -1,
-					layout_width = -1,
-					layout_margin = "3dp",
-					id = "funclayout",
-					{
-						LinearLayout,
-						layout_height = -1,
-						orientation = "vertical",
-						layout_width = -1,
-						id = "main_list"
-					},
-				},
-			},
-		},
-		{
-			View,
-			layout_width = "25dp",
-			layout_height = "25dp",
-			layout_alignParentRight = "true",
-			layout_alignParentBottom = "true",
-			id = "td",
-		},
+        -- Sidebar
+        {
+            LinearLayout,
+            orientation = "vertical",
+            layout_width = "120dp",
+            layout_height = -1,
+            background = getShepeBackground(COLOR_SIDEBAR, 30),
+            padding = "10dp",
+            {
+                LinearLayout,
+                layout_width = -1,
+                layout_height = "60dp",
+                gravity = "center",
+                {
+                    ImageView,
+                    layout_width = "40dp",
+                    layout_height = "40dp",
+                    src = icon_file,
+                },
+                {
+                    TextView,
+                    text = "DKTool\nSkyTool",
+                    textColor = Color.parseColor(COLOR_TEXT_PRIMARY),
+                    textSize = "10sp",
+                    layout_marginLeft = "5dp",
+                }
+            },
+            {
+                ScrollView,
+                layout_width = -1,
+                layout_height = -1,
+                VerticalScrollBarEnabled = false,
+                {
+                    LinearLayout,
+                    orientation = "vertical",
+                    layout_width = -1,
+                    id = "sidebar_list",
+                }
+            }
+        },
+        -- Main Content Area
+        {
+            LinearLayout,
+            orientation = "vertical",
+            layout_width = -1,
+            layout_height = -1,
+            {
+                RelativeLayout,
+                layout_width = -1,
+                layout_height = "50dp",
+                padding = "10dp",
+                {
+                    TextView,
+                    id = "content_title",
+                    text = "Welcome",
+                    textColor = Color.parseColor(COLOR_TEXT_PRIMARY),
+                    textSize = "16sp",
+                    layout_centerVertical = true,
+                },
+                {
+                    ImageView,
+                    layout_width = "25dp",
+                    layout_height = "25dp",
+                    layout_alignParentRight = true,
+                    layout_centerVertical = true,
+                    src = exit_path,
+                    onClick = function()
+                        window.removeView(xfc)
+                        luajava.exit()
+                        os.exit()
+                    end
+                }
+            },
+            {
+                ScrollView,
+                layout_width = -1,
+                layout_height = -1,
+                VerticalScrollBarEnabled = false,
+                {
+                    LinearLayout,
+                    orientation = "vertical",
+                    layout_width = -1,
+                    id = "content_list",
+                    padding = "10dp",
+                }
+            }
+        }
 	},
 }
 
 function LoadUi()
-    gg.toast("Initializing UI...")
+    gg.toast("Initializing Sidebar UI...")
 	local LayoutParams = WindowManager.LayoutParams
 	mainLayoutParams = getLayoutParams(LayoutParams.FLAG_NOT_FOCUSABLE)
 
@@ -422,7 +315,7 @@ function LoadUi()
             padding = "10dp",
 		},
 	})
-    xfq.setBackground(getShepeBackground(PURPLE_BG, 30))
+    xfq.setBackground(getShepeBackground(COLOR_ACCENT, 30))
 
 	moveTouch(suspended_ball, xfq, mainLayoutParams)
 	function suspended_ball.onClick()
@@ -431,112 +324,75 @@ function LoadUi()
 	end
 
 	xfc = loadlayout(xfc_table)
-	view_list.addView(loadlayout(natext("DASHBOARD", main_list)))
-	laytab = { main_list }
-	cpage = laytab[1]
 	moveTouch(touch, xfc, mainLayoutParams)
-	view_list.getChildAt(0).getPaint().setFakeBoldText(true)
 
-	for i = 1, #menus do
-		local btn = loadlayout({
-			RelativeLayout,
-			layout_height = "45dp",
-			layout_width = -1,
-            background = getShepeBackground(PURPLE_CARD, 15),
-            layout_margin = "2dp",
-			onClick = function()
-				cpage.setVisibility(View.GONE)
-				laytab[i + 1].setVisibility(View.VISIBLE)
-				cpage = laytab[i + 1]
-				local sw = loadlayout(natext(menus[i][1], laytab[i + 1]))
-				sw.getPaint().setFakeBoldText(true)
-				view_list.addView(sw)
-			end,
-			{
-				TextView,
-				layout_alignParentTop = "true",
-				layout_marginBottom = "20dp",
-				layout_height = "24dp",
-				layout_width = -1,
-                layout_marginLeft = "10dp",
-				text = menus[i][1],
-				textSize = "15sp",
-				textColor = Color.parseColor(TEXT_PRIMARY),
-			},
-			{
-				TextView,
-				layout_height = "16dp",
-				layout_width = -1,
-				layout_alignParentBottom = "true",
-				layout_marginBottom = "4dp",
-                layout_marginLeft = "10dp",
-				textSize = "11sp",
-				text = menus[i][2],
-				textColor = Color.parseColor(TEXT_SECONDARY),
-			},
-			pline(),
-		})
-		local lyt = loadlayout({
-			LinearLayout,
-			layout_height = -1,
-			orientation = "vertical",
-			Visibility = 8,
-			layout_width = -1
-		})
-		table.insert(laytab, lyt)
-		main_list.addView(btn)
-		funclayout.addView(lyt)
-	end
+    local content_views = {}
 
-	for i = 1, #menus do
-		for k = 1, #menus[i][3] do
-			local mtab = menus[i][3][k]
-			if mtab[1] == "t" then
-				VellMod_text(mtab, laytab[i + 1])
-			elseif mtab[1] == "s" then
-				VellMod_switch(mtab, laytab[i + 1])
-			end
-		end
-	end
+    for i, menu in ipairs(menus) do
+        local menu_name = menu[1]
+        local menu_features = menu[3]
 
-	function td.OnTouchListener(v, event)
-		if event.getAction() == MotionEvent.ACTION_DOWN then
-			params = ooo.getLayoutParams()
-			firstX = event.getRawX()
-			firstY = event.getRawY()
-			wmX = params.width
-			wmY = params.height
-			max = dp2px(350)
-			min = dp2px(50)
-		elseif event.getAction() == MotionEvent.ACTION_MOVE then
-			local width = wmX + (event.getRawX() - firstX)
-			local height = wmY + (event.getRawY() - firstY)
-			if width < max and width > min then
-				params.width = width
-				ooo.setBackground(miaobian(5, 40, PURPLE_BG, PURPLE_ACCENT))
-			elseif width > max then
-				ooo.setBackground(miaobian(5, 40, PURPLE_BG, "#FFFF0000"))
-				params.width = max
-			elseif width < min then
-				ooo.setBackground(miaobian(5, 40, PURPLE_BG, "#FFFF0000"))
-				params.width = min
-			end
-			if height < max and height > min then
-				params.height = height
-			elseif height > max then
-				params.height = max
-			elseif height < min then
-				params.height = min
-			end
-			ooo.setLayoutParams(params)
-		elseif event.getAction() == MotionEvent.ACTION_UP then
-			ooo.setBackground(getShepeBackground(PURPLE_BG, 40))
-		end
-		return true
-	end
+        -- Sidebar Item
+        local sidebar_item = loadlayout({
+            LinearLayout,
+            layout_width = -1,
+            layout_height = "45dp",
+            layout_marginBottom = "5dp",
+            gravity = "center_vertical",
+            padding = "8dp",
+            id = "item_container",
+            {
+                TextView,
+                text = menu_name,
+                textColor = Color.parseColor(COLOR_TEXT_SECONDARY),
+                textSize = "12sp",
+            }
+        })
+        sidebar_item.setBackground(getShepeBackground(COLOR_SIDEBAR, 10))
+
+        -- Content View for this menu
+        local menu_content = loadlayout({
+            LinearLayout,
+            orientation = "vertical",
+            layout_width = -1,
+            visibility = View.GONE,
+        })
+        content_list.addView(menu_content)
+        content_views[i] = menu_content
+
+        for _, feature in ipairs(menu_features) do
+            if feature[1] == "s" then
+                VellMod_switch(feature, menu_content)
+            elseif feature[1] == "t" then
+                VellMod_text(feature, menu_content)
+            end
+        end
+
+        sidebar_item.onClick = function()
+            for j, v in ipairs(content_views) do
+                v.setVisibility(View.GONE)
+                sidebar_list.getChildAt(j-1).setBackground(getShepeBackground(COLOR_SIDEBAR, 10))
+                sidebar_list.getChildAt(j-1).getChildAt(0).setTextColor(Color.parseColor(COLOR_TEXT_SECONDARY))
+            end
+            menu_content.setVisibility(View.VISIBLE)
+            sidebar_item.setBackground(getShepeBackground(COLOR_CARD, 10, 2, COLOR_ACCENT))
+            sidebar_item.getChildAt(0).setTextColor(Color.parseColor(COLOR_TEXT_PRIMARY))
+            content_title.setText(menu_name)
+        end
+
+        sidebar_list.addView(sidebar_item)
+
+        -- Default to first menu
+        if i == 1 then
+            menu_content.setVisibility(View.VISIBLE)
+            sidebar_item.setBackground(getShepeBackground(COLOR_CARD, 10, 2, COLOR_ACCENT))
+            sidebar_item.getChildAt(0).setTextColor(Color.parseColor(COLOR_TEXT_PRIMARY))
+            content_title.setText(menu_name)
+        end
+    end
 
 	window.addView(xfq, mainLayoutParams)
-    gg.toast("Menu Ready! Click the icon to open.")
+    gg.toast("Sidebar Menu Ready!")
 end
 
 -- Use Lock.Ui safely
@@ -546,11 +402,9 @@ if Lock and Lock.Ui then
         luajava.exit()
     end)
 else
-    -- Fallback attempt
     pcall(LoadUi)
 end
 
--- Keep alive loop (Prevents instant exit if Lock.Ui is not blocking)
 while true do
     gg.sleep(5000)
 end
