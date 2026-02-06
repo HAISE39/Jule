@@ -69,14 +69,14 @@ local menuLayout = {
     gravity="center_vertical",
     {
       TextView,
-      text="Plot Armor",
+      text="Refresh Skill",
       textColor="#FFFFFF",
       textSize="16sp",
       layout_weight=1,
     },
     {
       Switch,
-      id="switchPlotArmor",
+      id="switchRefreshSkill",
     }
   },
   {
@@ -165,9 +165,9 @@ menuView.onTouch = handleTouch
 iconView.onClick = showMenu
 btnClose.onClick = hideMenu
 
--- --- Feature: Plot Armor ---
+-- --- Feature: Refresh Skill ---
 
-local function runPlotArmor(enabled)
+local function runRefreshSkill(enabled)
   if not enabled then
     statusText.setText("Status: Disabled")
     return
@@ -175,28 +175,28 @@ local function runPlotArmor(enabled)
 
   thread(function()
     local memory = require("memory")
-    call(function() statusText.setText("Status: Scanning Plot Armor...") end)
+    call(function() statusText.setText("Status: Scanning Skill...") end)
 
-    -- Pattern 8;2;0;65536;1 (Dword)
-    local pattern = "8;2;0;65536;1"
+    -- Pattern 3;81;20 (Dword)
+    local pattern = "3;81;20"
     local results = memory.search(pattern, "Dword")
 
     if #results > 0 then
-      -- Value 65536 is at offset +12 (index 3)
-      memory.writeBatch(results, "-1", 12, "Dword")
+      -- Edit 3 (offset 0) to 25
+      memory.writeBatch(results, "25", 0, "Dword")
       call(function()
-        statusText.setText("Status: Plot Armor Active ("..#results..")")
-        Toast.makeText(activity, "Plot Armor Applied!", Toast.LENGTH_SHORT).show()
+        statusText.setText("Status: Skill Refreshed ("..#results..")")
+        Toast.makeText(activity, "Refresh Skill Applied!", Toast.LENGTH_SHORT).show()
       end)
     else
       call(function()
-        statusText.setText("Status: Pattern Not Found")
-        Toast.makeText(activity, "Plot Armor Scan Failed", Toast.LENGTH_SHORT).show()
+        statusText.setText("Status: Skill Not Found")
+        Toast.makeText(activity, "Refresh Skill Failed", Toast.LENGTH_SHORT).show()
       end)
     end
   end)
 end
 
-switchPlotArmor.onCheckedChange = function(v, isChecked)
-  runPlotArmor(isChecked)
+switchRefreshSkill.onCheckedChange = function(v, isChecked)
+  runRefreshSkill(isChecked)
 end
