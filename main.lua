@@ -1,98 +1,94 @@
 -- 支持ELGG修改器，作者：VellMod / Stylish Upgrade
--- Modern Sidebar UI using Changning E02PROMaterial3 Library
+-- Modern Material UI for ELGG using Changning Library
 
--- 1. Load Cloud Library (ELGG specific)
--- Note: loadYunLuaGroup is a core ELGG function for loading cloud-based UI modules.
-loadYunLuaGroup("5C3C4E3813681C4C204C35346F1B4C2F7EFF612D2B22176DCA84CB8CFE5F350E1D4733067DCC9F")
-
--- 2. UI Configuration Globals
-悬浮窗图标 = 'https://files.catbox.moe/mbkj32.png'
-标题 = 'VellMod Material 3'
-分页 = {
-    '实用功能',
-    '娱乐功能',
-    '设置',
-}
-
--- Theme Colors for components
-local PURPLE_ACCENT = "#D0BCFF"
-
--- 3. Initialization Mapper
+-- 1. Essential Initialization Function (MUST BE DEFINED BEFORE LOADING LIBRARY)
 function init()
     stab = 分页
     ttitle = 标题
     xfcpic = 悬浮窗图标
 end
+
+-- 2. Load Cloud UI Library
+loadYunLuaGroup("5C3C4E3813681C4C204C35346F1B4C2F7EFF612D2B22176DCA84CB8CFE5F350E1D4733067DCC9F")
+
+-- 3. Mod Logic Functions
+function refresh_skill()
+    gg.clearResults()
+    gg.searchNumber("3;81;20", gg.TYPE_DWORD)
+    local results = gg.getResults(100)
+    for i, v in ipairs(results) do
+        if v.value == "3" then
+            v.value = "25"
+            v.freeze = true
+        end
+    end
+    gg.addListItems(results)
+    gg.toast("Refresh Skill: Applied")
+end
+
+function open_bag()
+    gg.clearResults()
+    gg.searchNumber("h FF FF FF FF 02 00 00 00 FF FF FF FF 00 00 00 00 00 00 00 00", gg.TYPE_BYTE)
+    local results = gg.getResults(1)
+    if #results > 0 then
+        local address = results[1].address + 4
+        gg.setValues({{address = address, flags = gg.TYPE_DWORD, value = 12}})
+        gg.toast("Open Bag: Applied")
+    else
+        gg.toast("Pattern not found")
+    end
+end
+
+-- 4. UI Configuration
+悬浮窗图标 = 'https://files.catbox.moe/mbkj32.png'
+标题 = 'VellMod Material 3'
+分页 = {
+    '公告',
+    '常用功能',
+    '设置',
+}
+
+-- 5. Trigger Initialization
 init()
 
--- 4. Feature Implementation
--- Each table in uistart corresponds to an index in the '分页' table.
+-- 6. Define UI Content
 uistart({
-    { -- 实用功能 (Practical Features)
-        changning.text("Main Hacks", PURPLE_ACCENT, "16sp", true),
-        changning.line("Movement"),
-        changning.switch(
-            "每日任务",
-            function() gg.toast("Daily Tasks: ON") end,
-            function() gg.toast("Daily Tasks: OFF") end,
-            "Automate daily routine"
-        ),
-        changning.button(
-            "原地光翼",
-            function() gg.toast("Teleporting to wings...") end,
-            PURPLE_ACCENT
-        ),
-        changning.box({
-            "Teleport Tools",
-            changning.check({
-                { "Auto Run", function() end, function() end },
-                { "Safe Mode", function() end, function() end },
-            })
-        }),
+    { -- 公告 (Notice)
+        changning.text('Selamat Datang di VellMod','#D0BCFF','16sp',true),
+        changning.line('Update Log'),
+        changning.text('v2.2.0: Migrated to Changning Material UI'),
+        changning.text('Bug fixes and performance improvements.'),
     },
-    { -- 娱乐功能 (Fun Features)
-        changning.line("Visuals & Fun"),
+    { -- 常用功能 (Common Features)
+        changning.text('Game Modifications', '#D0BCFF', '14sp'),
+        changning.button('Refresh Skill', function() refresh_skill() end),
+        changning.button('Open Bag (Premium)', function() open_bag() end),
+        changning.line('Misc'),
         changning.switch(
-            "离线模式",
-            function() gg.toast("Offline Mode: ON") end,
-            function() gg.toast("Offline Mode: OFF") end,
-            "Play without server connection"
+            "Speed Hack (2x)",
+            function() gg.setSpeed(2.0) end,
+            function() gg.setSpeed(1.0) end,
+            "Boost player movement speed"
         ),
-        changning.switch2(
-            "无限能量",
-            function() gg.toast("Infinite Energy: ON") end,
-            function() gg.toast("Infinite Energy: OFF") end
-        ),
-        changning.radio({
-            { "Normal Speed", function() gg.setSpeed(1.0) end },
-            { "Fast Speed (2x)", function() gg.setSpeed(2.0) end },
-            { "Sonic Speed (5x)", function() gg.setSpeed(5.0) end },
-        }),
     },
     { -- 设置 (Settings)
-        changning.text("About VellMod", PURPLE_ACCENT, "14sp"),
-        changning.text("Version: 2.1.0 (E02PRO)"),
-        changning.text("Author: VellMod"),
-        changning.line("Exit"),
-        changning.button(
-            "Close Script",
-            function()
-                gg.toast("Closing...")
-                Lock.unUi()
-                os.exit()
-            end,
-            "#FF5252"
-        ),
+        changning.text('Modder: VellMod'),
+        changning.text('Platform: ELGG'),
+        changning.line('Exit'),
+        changning.button('Close Script', function()
+            gg.toast("Exiting...")
+            Lock.unUi()
+            os.exit()
+        end, '#FF5252'),
     },
 })
 
--- 5. Launch UI using ELGG's Lock.Ui
--- 'invoke' is the entry point defined by the loaded cloud library.
+-- 7. Launch UI
 Lock.Ui(invoke, nil, function(err)
-    print("ELGG UI Error: " .. err)
+    print("ELGG Error: " .. err)
 end)
 
--- Keep the script thread alive
+-- Keep Alive
 while true do
     gg.sleep(5000)
 end
