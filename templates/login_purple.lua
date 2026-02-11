@@ -1,5 +1,6 @@
 -- Modern Stylish Purple ELGG Login Script
 -- Author: Jules (Assistant)
+-- Fixed: Removed textStyle and improved compatibility with ELGG loadlayout
 
 import "android.app.*"
 import "android.os.*"
@@ -97,10 +98,9 @@ function LoadUi()
                 {
                     TextView,
                     text = "Welcome Back",
-                    textColor = theme_accent,
+                    textColor = Color.parseColor(theme_accent),
                     textSize = "18sp",
-                    textStyle = "bold",
-                    layout_marginBottom = "10dp",
+                    layout_margin = "10dp",
                 },
                 {
                     EditText,
@@ -119,13 +119,12 @@ function LoadUi()
                 {
                     TextView,
                     layout_width = -1,
-                    layout_marginTop = "15dp",
+                    layout_margin = "15dp",
                     layout_height = "45dp",
                     text = "LOGIN",
                     gravity = "center",
                     textSize = "16sp",
                     textColor = 0xFF000000,
-                    textStyle = "bold",
                     background = getShapeBackground(theme_accent, 25),
                     onClick = function()
                         local input = edit.getText().toString()
