@@ -1,39 +1,47 @@
-# Rekomendasi Modul GameGuardian (Platform ELGG)
+# Rekomendasi Modul & Fitur ELGG (Sumber Resmi)
 
-Berikut adalah daftar modul dan library yang direkomendasikan untuk pengembangan script mod menu di GameGuardian, khususnya menggunakan platform ELGG.
+Berdasarkan dokumentasi resmi dari [Gitee ELGG](https://gitee.com/xiaomanyun/elgg), berikut adalah rekomendasi fitur dan modul untuk pengembangan script mod menu yang profesional:
 
-## 1. Library Antarmuka Pengguna (UI)
+## 1. Antarmuka Pengguna (UI) & Grafis
 
-### **Changning E03PRO / Material3**
-Library UI paling populer untuk ELGG saat ini. Mendukung tampilan modern bergaya Material Design 3.
-- **Kelebihan**: Tampilan profesional, sidebar navigasi otomatis, komponen lengkap (button, switch, slider).
-- **Penggunaan**: `loadYunLuaGroup("hash_library")` lalu gunakan API `CA`.
+### **Official Material3 Library**
+Library UI utama yang terdapat langsung di repositori resmi.
+- **Fitur**: Desain modern Material 3, komponen responsif, dan dukungan tema dinamis.
+- **Rekomendasi**: Gunakan library ini untuk membuat menu sidebar yang elegan dan sesuai standar ELGG terbaru.
 
-### **ImGui**
-Library standar industri untuk overlay grafis.
-- **Kelebihan**: Sangat cepat (Hardware Accelerated), responsif, dan fleksibel.
-- **Penggunaan**: Cocok untuk menu yang membutuhkan banyak grafik atau pengaturan mendalam.
+### **ImGui & DrawGG**
+Dua library penting untuk interaksi visual langsung di atas game.
+- **ImGui**: Digunakan untuk menu floating window yang kompleks dan berkinerja tinggi.
+- **DrawGG**: Modul khusus untuk melakukan *drawing* atau penggambaran (seperti ESP/Line/Box) langsung pada layar game.
 
-### **AlGui / VellMod**
-Library UI alternatif yang lebih ringan.
-- **Kelebihan**: Mudah dipelajari, cocok untuk script sederhana.
+### **WebView (H5 UI)**
+ELGG mendukung pemuatan antarmuka berbasis HTML5.
+- **Kelebihan**: Anda bisa menggunakan keahlian web development (HTML/CSS/JS) untuk membuat UI yang sangat kustom dan cantik menggunakan `h5gg` UI.
 
-## 2. Modul Utilitas (Utility)
+## 2. Fitur Lanjutan (Advanced Features)
 
-### **Memory API (`memory.lua`)**
-Modul untuk manipulasi memori tanpa root melalui `/proc/self/mem`.
-- **Fitur**: Pencarian pattern hex, pembacaan/penulisan DWORD, FLOAT, dan QWORD secara efisien menggunakan `java.io.RandomAccessFile`.
+### **luajava**
+Fitur paling powerful yang memungkinkan script Lua berinteraksi langsung dengan API Android.
+- **Kegunaan**: Memanggil sistem service, memanipulasi View Android secara native, atau mengakses fitur perangkat yang tidak tersedia di Lua standar.
 
-### **File Utility**
-Modul bawaan ELGG untuk manajemen resource.
-- **Fitur**: `file.download` untuk mengambil aset ikon dari URL, `file.mkdir` untuk membuat folder penyimpanan data mod.
+### **Loading External Files (.dex / .jar)**
+Anda dapat memuat file Java eksternal untuk memperluas fungsionalitas script.
+- **Kegunaan**: Menjalankan logika Java yang kompleks atau menggunakan library Java pihak ketiga di dalam script Lua Anda.
 
-## 3. Sistem Keamanan & Distribusi
+## 3. Keamanan & Proteksi (Built-in Security)
 
-### **Cloud Loader**
-Metode pemuatan script secara dinamis dari server.
-- **Fungsi**: Memudahkan update script tanpa mewajibkan user mendownload ulang, serta menambah lapisan keamanan (obfuscasi di sisi server).
+### **Lua-to-Dex Encryption**
+Fitur unggulan ELGG untuk mengamankan kode sumber.
+- **Fungsi**: Mengonversi script Lua menjadi bytecode Dex yang sangat sulit untuk didekompilasi oleh attacker.
 
-### **Login Dialog**
-Modul untuk sistem otentikasi.
-- **Fungsi**: Membatasi akses script hanya untuk pengguna yang memiliki lisensi atau password.
+### **Firewall & Anti-Log System**
+ELGG memiliki mekanisme internal untuk mendeteksi dan mencegah upaya *hooking* atau *logging* terhadap fungsi-fungsi penting GG (seperti `gg.editAll`, `gg.setValues`).
+- **Mekanisme**: Menggunakan saluran enkripsi antara layer Lua dan Java untuk mengirim data, serta menyuntikkan data sampah untuk mengelabui logger.
+
+## 4. Utilitas Rekomendasi
+
+### **ELGG Toolbox (ELGG工具箱.lua)**
+Gunakan script toolbox resmi untuk mempermudah proses enkripsi, pengaturan project, dan distribusi update melalui cloud.
+
+### **Cloud Integration**
+Manfaatkan integrasi dengan **EL云验证** (Cloud Verification) untuk sistem login dan manajemen pengguna yang lebih aman dan terpusat.

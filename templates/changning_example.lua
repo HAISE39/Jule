@@ -1,54 +1,63 @@
--- Template Mod Menu ELGG (Changning E03PRO)
--- Dibuat berdasarkan rekomendasi modul UI modern
+-- Template Mod Menu ELGG (Official Style)
+-- Mengacu pada dokumentasi Gitee: https://gitee.com/xiaomanyun/elgg
 
 function init()
-    -- Pemetaan variabel internal library ke global environment
+    -- Sinkronisasi variabel lingkungan untuk library UI
     stab = _ENV["halaman"]
     ttitle = _ENV["judul"]
     xfcpic = _ENV["ikon_jendela_mengambang"]
 end
 
--- Memuat Library Changning (Hash contoh)
--- loadYunLuaGroup("hash_library_di_sini")
+-- 1. Pemuatan Library (Contoh Material3 dari Gitee)
+-- loadYunLuaGroup("material3_hash")
 
--- Contoh Fitur Mod
-function fitur_unlimited_hp(state)
+-- 2. Contoh Fitur Menggunakan luajava (Akses API Android)
+function showToast(text)
+    luajava.import("android.widget.Toast")
+    luajava.import("android.app.ActivityThread")
+    local activity = ActivityThread.currentActivityThread():getApplication()
+    Toast.makeText(activity, text, Toast.LENGTH_SHORT).show()
+end
+
+-- 3. Contoh Logika Modifikasi Memori
+function toggle_mod(state)
     if state then
-        print("Unlimited HP Aktif")
-        -- Logika pencarian memory di sini
+        showToast("Mod Aktif!")
+        -- Gunakan gg atau modul memory eksternal
     else
-        print("Unlimited HP Nonaktif")
+        showToast("Mod Nonaktif!")
     end
 end
 
--- Inisialisasi Data UI
-_ENV["judul"] = "ELGG MOD MENU"
-_ENV["ikon_jendela_mengambang"] = "https://example.com/icon.png"
+-- 4. Konfigurasi UI
+_ENV["judul"] = "ELGG OFFICIAL TEMPLATE"
+_ENV["ikon_jendela_mengambang"] = "https://gitee.com/xiaomanyun/elgg/raw/main/favicon.ico"
 _ENV["halaman"] = {
     {
-        "Main Menu", -- Judul Tab
+        "BERANDA",
         {
-            -- Menggunakan komponen CA (Changning API)
-            CAswitch("Unlimited HP", fitur_unlimited_hp, nil, "Membuat HP tidak terbatas"),
-            CAbutton("Refresh Skill", function() print("Skill Refreshed") end, "#FFBB86FC"),
+            -- Komponen library Material3/Changning
+            CAswitch("Aktifkan Fitur X", toggle_mod, nil, "Deskripsi fitur di sini"),
+            CAbutton("Test Android Toast", function() showToast("Halo dari luajava!") end, "#FFBB86FC"),
         }
     },
     {
-        "Settings",
+        "PENGATURAN",
         {
-            CAtext("Mod Menu Version 1.0", "#FFFFFFFF", 14, true),
+            CAtext("Versi Script: 2.0 (Stable)", "#FFFFFFFF", 14, true),
+            CAbutton("Keluar", function() os.exit() end, "#FFFF5252"),
         }
     }
 }
 
--- Jalankan Inisialisasi
+-- Jalankan Inisialisasi Environment
 init()
 
--- Fungsi untuk memulai UI
+-- 5. Fungsi Utama untuk Meluncurkan UI
 function StartUI()
+    -- Memastikan antarmuka berjalan di thread yang benar
     uistart({
         {
-            -- Layout Sidebar / Drawer
             stab,
             ttitle,
             xfcpic
@@ -56,7 +65,11 @@ function StartUI()
     })
 end
 
--- Entry Point ELGG
+-- 6. Entry Point Resmi ELGG
+-- Menggunakan Lock.Ui untuk stabilitas dan proteksi error
 Lock.Ui(StartUI, nil, function(err)
-    print("Error: " .. tostring(err))
+    print("ELGG Error: " .. tostring(err))
 end)
+
+-- Catatan: Simpan script ini dan gunakan 'ELGG Toolbox' untuk enkripsi Lua-to-Dex
+-- sebelum didistribusikan ke pengguna.
