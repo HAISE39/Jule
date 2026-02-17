@@ -1,84 +1,102 @@
+"use client";
+
+import { useState, useMemo } from "react";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import ModCard from "@/components/ModCard";
 import Footer from "@/components/Footer";
+import { MODS_DATA, ModCategory } from "@/data/mods";
+import { Search, Filter } from "lucide-react";
 
-const DUMMY_MODS = [
-  {
-    title: "Aurcus Online Mod Menu",
-    image: "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=2070&auto=format&fit=crop",
-    type: "Mod" as const,
-    version: "VIP" as const,
-    features: [
-      "Open Bag anywhere",
-      "Refresh Skill (No Cooldown)",
-      "High Damage Multiplier",
-      "Anti-Ban Protection"
-    ],
-    whatsappUrl: "https://wa.me/6285706400133"
-  },
-  {
-    title: "Aurcus Online Script",
-    image: "https://images.unsplash.com/photo-1614027164847-1b2809eb7b9c?q=80&w=1964&auto=format&fit=crop",
-    type: "Script" as const,
-    version: "Free" as const,
-    features: [
-      "Auto Questing",
-      "Basic Stats Viewer",
-      "Simple UI",
-      "Safe to use"
-    ],
-    downloadUrl: "https://www.mediafire.com/file/wtvi355p17u01kv/Aurcus_Online_1.1.apk/file"
-  },
-  {
-    title: "Generic Android Injector",
-    image: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=2070&auto=format&fit=crop",
-    type: "Mod" as const,
-    version: "VIP" as const,
-    features: [
-      "Universal Memory Search",
-      "Direct Proc/Mem Access",
-      "Floating Menu UI",
-      "Lua Script Execution"
-    ],
-    whatsappUrl: "https://wa.me/6285706400133"
-  },
-  {
-    title: "Mobile Game Utility",
-    image: "https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=2071&auto=format&fit=crop",
-    type: "Script" as const,
-    version: "Free" as const,
-    features: [
-      "Device Info Tracker",
-      "Lag Fixer",
-      "Ping Booster",
-      "Ad Blocker"
-    ],
-    downloadUrl: "https://www.mediafire.com/file/wtvi355p17u01kv/Aurcus_Online_1.1.apk/file"
-  }
-];
+const CATEGORIES: (ModCategory | "All")[] = ["All", "RPG", "FPS", "Farm", "Action", "Utility"];
 
 export default function Home() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<(ModCategory | "All")>("All");
+
+  const filteredMods = useMemo(() => {
+    return MODS_DATA.filter((mod) => {
+      const matchesSearch = mod.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            mod.features.some(f => f.toLowerCase().includes(searchQuery.toLowerCase()));
+      const matchesCategory = selectedCategory === "All" || mod.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [searchQuery, selectedCategory]);
+
   return (
     <main className="min-h-screen">
       <Navbar />
       <Hero />
 
-      <section id="products" className="py-24 bg-background relative">
+      <section id="products" className="py-12 bg-background relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Our Premium <span className="text-primary">Collection</span></h2>
-            <p className="text-foreground/60">Choose from our selection of high-quality mods and scripts.</p>
+
+          {/* Search and Filter UI */}
+          <div className="mb-12 space-y-6">
+            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+              <div className="relative w-full md:max-w-md">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-foreground/40 w-5 h-5" />
+                <input
+                  type="text"
+                  placeholder="Search mods or features..."
+                  className="w-full pl-12 pr-4 py-3 bg-card-bg border border-border-custom rounded-xl focus:outline-none focus:border-primary transition-colors text-white"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+
+              <div className="flex items-center gap-2 overflow-x-auto pb-2 w-full md:w-auto scrollbar-hide">
+                <Filter className="text-primary w-5 h-5 flex-shrink-0 mr-2" />
+                {CATEGORIES.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                      selectedCategory === cat
+                        ? "bg-primary text-background"
+                        : "bg-card-bg border border-border-custom text-foreground/60 hover:border-primary/50"
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {DUMMY_MODS.map((mod, index) => (
-              <ModCard
-                key={index}
-                {...mod}
-              />
-            ))}
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-bold mb-2">
+              {selectedCategory === "All" ? "All Products" : `${selectedCategory} Collection`}
+            </h2>
+            <p className="text-foreground/60">
+              {filteredMods.length} {filteredMods.length === 1 ? "product" : "products"} found
+            </p>
           </div>
+
+          {filteredMods.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {filteredMods.map((mod) => (
+                <ModCard
+                  key={mod.id}
+                  {...mod}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="py-20 text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary mb-4">
+                <Search size={32} />
+              </div>
+              <h3 className="text-xl font-bold mb-2">No results found</h3>
+              <p className="text-foreground/60">Try adjusting your search or filter to find what you&apos;re looking for.</p>
+              <button
+                onClick={() => {setSearchQuery(""); setSelectedCategory("All");}}
+                className="mt-6 text-primary hover:underline"
+              >
+                Clear all filters
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
