@@ -17,14 +17,18 @@ Script sederhana untuk mengupload folder langsung ke GitHub melalui Termux. Kare
    ./git-upload.sh
    ```
 
-4. **Ikuti Instruksi**
-   - Masukkan path folder yang ingin diupload (tekan Enter untuk folder saat ini).
-   - Masukkan username dan email GitHub jika belum dikonfigurasi.
-   - Masukkan pesan commit.
-   - Masukkan URL Repositori GitHub jika belum ada remote.
-   - Saat diminta password, **gunakan Personal Access Token (PAT)** GitHub Anda, bukan password akun.
+## Penjelasan "Path Folder"
+Saat script meminta "Masukkan path folder", Anda memberikan alamat lokasi folder tersebut:
+- **`.` (titik)**: Folder tempat Anda berada sekarang.
+- **`Documents/web-saya`**: Folder bernama `web-saya` di dalam folder `Documents`.
+- **`/sdcard/Download/folder-bot`**: Folder yang ada di folder Download memori internal HP Anda. (Pastikan sudah menjalankan `termux-setup-storage` untuk akses sdcard).
+- **`~/scripts`**: Folder `scripts` di folder home Termux Anda.
 
 ## Persyaratan
 - Termux
 - Koneksi Internet
 - Akun GitHub & Personal Access Token (PAT)
+- Akses penyimpanan (Jalankan `termux-setup-storage` di Termux jika ingin upload dari folder HP).
+
+## Tips
+Saat diminta password oleh GitHub, **jangan masukkan password akun**, tetapi masukkan **Personal Access Token (PAT)** yang bisa dibuat di Settings > Developer Settings > Personal Access Tokens di GitHub.
