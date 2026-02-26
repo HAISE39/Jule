@@ -1,13 +1,18 @@
 # Jule - GitHub Upload for Termux
 
-Script sederhana untuk mengupload folder langsung ke GitHub melalui Termux. Karena GitHub tidak memiliki fitur unzip untuk folder yang diupload manual lewat web, script ini membantu Anda mengontrol repositori GitHub langsung dari Termux.
+Script sederhana untuk mengupload folder langsung ke GitHub melalui Termux. Script ini membantu Anda mengontrol repositori GitHub secara fleksibel, mendukung banyak repo, dan memudahkan pengaturan awal.
+
+## Fitur Baru
+- **Tautan Akun Otomatis**: Script akan meminta username & email jika belum pernah diatur.
+- **Dukungan Banyak Repo**: Anda bisa mengganti link repository GitHub kapan saja saat menjalankan script.
+- **Penanganan Path Cerdas**: Mendukung penggunaan `~` (home) secara langsung.
 
 ## Cara Penggunaan
 
-1. **Unduh Script**
+1. **Persiapan**
    Simpan script `git-upload.sh` di folder home Termux Anda.
 
-2. **Berikan Izin Eksekusi**
+2. **Izin Eksekusi**
    ```bash
    chmod +x git-upload.sh
    ```
@@ -18,17 +23,15 @@ Script sederhana untuk mengupload folder langsung ke GitHub melalui Termux. Kare
    ```
 
 ## Penjelasan "Path Folder"
-Saat script meminta "Masukkan path folder", Anda memberikan alamat lokasi folder tersebut:
-- **`.` (titik)**: Folder tempat Anda berada sekarang.
-- **`Documents/web-saya`**: Folder bernama `web-saya` di dalam folder `Documents`.
-- **`/sdcard/Download/folder-bot`**: Folder yang ada di folder Download memori internal HP Anda. (Pastikan sudah menjalankan `termux-setup-storage` untuk akses sdcard).
-- **`~/scripts`**: Folder `scripts` di folder home Termux Anda.
+Saat script meminta path folder, Anda bisa memasukkan:
+- **`.` (titik)**: Untuk folder saat ini.
+- **`~/kim/app`**: Contoh folder di direktori home Anda.
+- **`/sdcard/Download/project`**: Contoh folder di penyimpanan internal HP.
+
+## Tips Penting
+- **Personal Access Token (PAT)**: Saat GitHub meminta password, masukkan **Token**, bukan password akun Anda.
+- **Akses Storage**: Jika ingin upload dari memori HP, pastikan sudah menjalankan `termux-setup-storage`.
 
 ## Persyaratan
-- Termux
-- Koneksi Internet
-- Akun GitHub & Personal Access Token (PAT)
-- Akses penyimpanan (Jalankan `termux-setup-storage` di Termux jika ingin upload dari folder HP).
-
-## Tips
-Saat diminta password oleh GitHub, **jangan masukkan password akun**, tetapi masukkan **Personal Access Token (PAT)** yang bisa dibuat di Settings > Developer Settings > Personal Access Tokens di GitHub.
+- Termux & Internet.
+- Akun GitHub.
