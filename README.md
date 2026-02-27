@@ -2,7 +2,8 @@
 
 Script sederhana untuk mengupload folder langsung ke GitHub melalui Termux. Script ini membantu Anda mengontrol repositori GitHub secara fleksibel, mendukung banyak repo, dan memudahkan pengaturan awal.
 
-## Fitur Baru
+## Fitur Unggulan
+- **Sinkronisasi Otomatis**: Menangani error `[rejected]` dengan melakukan sinkronisasi (`pull --rebase`) sebelum upload.
 - **Tautan Akun Otomatis**: Script akan meminta username & email jika belum pernah diatur.
 - **Dukungan Banyak Repo**: Anda bisa mengganti link repository GitHub kapan saja saat menjalankan script.
 - **Penanganan Path Cerdas**: Mendukung penggunaan `~` (home) secara langsung.
@@ -25,12 +26,13 @@ Script sederhana untuk mengupload folder langsung ke GitHub melalui Termux. Scri
 ## Penjelasan "Path Folder"
 Saat script meminta path folder, Anda bisa memasukkan:
 - **`.` (titik)**: Untuk folder saat ini.
-- **`~/kim/app`**: Contoh folder di direktori home Anda.
-- **`/sdcard/Download/project`**: Contoh folder di penyimpanan internal HP.
+- **`~/project-saya`**: Folder di direktori home Termux.
+- **`/sdcard/Download/script-bot`**: Folder di memori internal HP.
 
 ## Tips Penting
-- **Personal Access Token (PAT)**: Saat GitHub meminta password, masukkan **Token**, bukan password akun Anda.
-- **Akses Storage**: Jika ingin upload dari memori HP, pastikan sudah menjalankan `termux-setup-storage`.
+- **Error [Rejected]**: Jika muncul error ini, script akan otomatis mencoba menyamakan file Anda dengan yang ada di GitHub. Jika masih gagal, script akan menawarkan opsi **Force Push** (Gunakan dengan hati-hati!).
+- **Personal Access Token (PAT)**: Gunakan Token GitHub sebagai password saat diminta.
+- **Akses Storage**: Jalankan `termux-setup-storage` agar Termux bisa membaca folder di HP Anda.
 
 ## Persyaratan
 - Termux & Internet.

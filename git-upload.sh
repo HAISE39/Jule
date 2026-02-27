@@ -42,7 +42,7 @@ echo ""
 read -p "Masukkan path folder yang ingin diupload: " FOLDER_INPUT
 FOLDER_INPUT=${FOLDER_INPUT:-.}
 
-# Manual expansion of ~ (Tilde) because 'read' does not expand it
+# Manual expansion of ~ (Tilde)
 if [[ "$FOLDER_INPUT" == "~/"* ]]; then
     FOLDER="${HOME}/${FOLDER_INPUT:2}"
 elif [[ "$FOLDER_INPUT" == "~" ]]; then
@@ -83,6 +83,11 @@ if [ -z "$REMOTE_URL" ]; then
     fi
 fi
 
+# Branch handling
+BRANCH=$(git branch --show-current)
+BRANCH=${BRANCH:-main}
+git branch -M "$BRANCH"
+
 # Add and Commit
 echo -e "${YELLOW}Menyiapkan file...${NC}"
 git add .
@@ -90,14 +95,25 @@ read -p "Pesan Update (Commit): " MESSAGE
 MESSAGE=${MESSAGE:-"Update via Termux"}
 git commit -m "$MESSAGE"
 
-# Branch handling
-BRANCH=$(git branch --show-current)
-BRANCH=${BRANCH:-main}
-git branch -M "$BRANCH"
+# Sync with remote (Handling the 'rejected' error)
+echo -e "${YELLOW}Sinkronisasi dengan GitHub...${NC}"
+git pull origin "$BRANCH" --rebase
 
-echo -e "${YELLOW}Pushing ke GitHub...${NC}"
-echo -e "${BLUE}Catatan: Gunakan Personal Access Token (PAT) sebagai pengganti password.${NC}"
-git push -u origin "$BRANCH"
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Sinkronisasi gagal. Pastikan link repo benar dan Token Anda aktif.${NC}"
+    # If rebase fails, user might need to fix conflicts manually, but for a simple script,
+    # we just warn and proceed with push if possible, or exit.
+    read -p "Lanjutkan push paksa? (Hati-hati, file di GitHub bisa terhapus!) (y/n): " FORCE_PUSH
+    if [[ "$FORCE_PUSH" =~ ^[Yy]$ ]]; then
+        git push -u origin "$BRANCH" -f
+    else
+        error_exit "Push dibatalkan untuk menghindari konflik."
+    fi
+else
+    echo -e "${YELLOW}Pushing ke GitHub...${NC}"
+    echo -e "${BLUE}Catatan: Gunakan Personal Access Token (PAT) sebagai pengganti password.${NC}"
+    git push -u origin "$BRANCH"
+fi
 
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}BERHASIL! Folder telah diupload ke GitHub.${NC}"
