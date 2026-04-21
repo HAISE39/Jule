@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: #0A0A0A;
+  --color-foreground: #EDEDED;
+  --color-primary: #BB86FC;
+  --color-secondary: #7C3AED;
+  --color-accent: #D0BCFF;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+
+@layer base {
+  :root {
+    --background: 10 10 10;
+    --foreground: 237 237 237;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0A0A0A;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #1A1A1A;
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #7C3AED;
+  }
+}
+
+@layer components {
+  .anime-border {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .anime-border::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 1px solid var(--color-primary);
+    opacity: 0.3;
+    pointer-events: none;
+  }
+
+  .glow-text {
+    text-shadow: 0 0 10px rgba(187, 134, 252, 0.5);
+  }
+
+  .glass-card {
+    background: rgba(15, 15, 15, 0.7);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(187, 134, 252, 0.1);
+  }
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
