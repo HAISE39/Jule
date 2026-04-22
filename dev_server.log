@@ -1,0 +1,23 @@
+
+> tmp-app@0.1.0 dev
+> next dev
+
+⚠ Port 3000 is in use by an unknown process, using available port 3001 instead.
+▲ Next.js 16.2.4 (Turbopack)
+- Local:         http://localhost:3001
+- Network:       http://192.168.0.2:3001
+✓ Ready in 594ms
+⨯ Another next dev server is already running.
+
+- Local:        http://localhost:3000
+- PID:          69440
+- Dir:          /app
+- Log:          .next/devFirebase Admin: FIREBASE_PROJECT_ID is not set. Skipping initialization.
+ GET /dashboard 200 in 556ms (next.js: 173ms, application-code: 383ms)
+ POST /dashboard 303 in 98ms (next.js: 4ms, application-code: 94ms)
+  └─ ƒ <inline action>({}) in 5ms src/dashboard/page.tsx
+ GET /dashboard 200 in 67ms (next.js: 5ms, application-code: 62ms)
+ GET /dashboard 200 in 91ms (next.js: 5ms, application-code: 85ms)
+ GET /dashboard 200 in 46ms (next.js: 3ms, application-code: 43ms)
+ POST /dashboard 303 in 73ms (next.js: 3ms, application-code: 69ms)
+  └─ ƒ <inline action>({}) in 2ms src/dashboard/page.tsx
