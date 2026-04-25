@@ -1,9 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import { Search, ArrowRight, Loader2, Copy, ExternalLink, RefreshCw, AlertCircle, Zap } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Search, ArrowRight, Loader2, Copy, ExternalLink, RefreshCw, AlertCircle, Zap, Hourglass, CheckCircle2, AlertTriangle } from "lucide-react";
 import { matchLink } from "@/lib/bypass-config";
 import { motion, AnimatePresence } from "framer-motion";
+
+type BypassStatus = "IDLE" | "WAITING" | "ACTIVE" | "COMPLETED" | "ERROR" | "DELAYED";
+
+interface StatusConfig {
+  title: string;
+  text: string;
+  color: string;
+  icon: React.ReactNode;
+}
 
 export function BypassInput() {
   const [url, setUrl] = useState("");
@@ -11,12 +20,83 @@ export function BypassInput() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [showFallback, setShowFallback] = useState(false);
+  const [status, setStatus] = useState<BypassStatus>("IDLE");
+  const [statusText, setStatusText] = useState("");
+
+  const pollInterval = useRef<NodeJS.Timeout | null>(null);
+
+  const statusConfigs: Record<BypassStatus, StatusConfig> = {
+    IDLE: { title: "", text: "", color: "", icon: null },
+    WAITING: {
+      title: "Waiting",
+      text: "Your request is waiting to be processed.",
+      color: "text-yellow-400",
+      icon: <Hourglass className="animate-pulse" />
+    },
+    ACTIVE: {
+      title: "Processing",
+      text: "This link will take slightly longer due to complex bypass process. Please wait...",
+      color: "text-primary",
+      icon: <Loader2 className="animate-spin" />
+    },
+    COMPLETED: {
+      title: "Completed",
+      text: "Your request has been completed.",
+      color: "text-green-400",
+      icon: <CheckCircle2 />
+    },
+    ERROR: {
+      title: "Error",
+      text: "Your request has encountered an error.",
+      color: "text-red-400",
+      icon: <AlertCircle />
+    },
+    DELAYED: {
+      title: "Delayed",
+      text: "Request failed but we will shortly retry. Just wait a few seconds...",
+      color: "text-yellow-500",
+      icon: <RefreshCw className="animate-spin" />
+    }
+  };
+
+  const startPolling = (id: string) => {
+    if (pollInterval.current) clearInterval(pollInterval.current);
+
+    pollInterval.current = setInterval(async () => {
+      try {
+        const response = await fetch(`/api/bypass/long-lived/${id}`);
+        const data = await response.json();
+
+        if (data.status) {
+          setStatus(data.status as BypassStatus);
+          if (data.status === "COMPLETED" && data.result) {
+            setResult(data.result);
+            setLoading(false);
+            if (pollInterval.current) clearInterval(pollInterval.current);
+          } else if (data.status === "ERROR") {
+            setError(data.errorMessage || "An error occurred during bypass.");
+            setLoading(false);
+            if (pollInterval.current) clearInterval(pollInterval.current);
+          }
+        }
+      } catch (err) {
+        console.error("Polling error:", err);
+      }
+    }, 3000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (pollInterval.current) clearInterval(pollInterval.current);
+    };
+  }, []);
 
   const handleBypass = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setResult(null);
     setShowFallback(false);
+    setStatus("IDLE");
 
     if (!url) {
       setError("Please enter a URL");
@@ -30,28 +110,40 @@ export function BypassInput() {
     }
 
     setLoading(true);
+    setStatus("WAITING");
 
     try {
       const response = await fetch(`/api/bypass?url=${encodeURIComponent(url)}`);
       const data = await response.json();
 
-      if (data.success && data.destination) {
-        setResult(data.destination);
+      if (response.ok) {
+        if (data.isLongLivedToken && data.data) {
+          startPolling(data.data);
+        } else if (data.data) {
+          setResult(data.data);
+          setStatus("COMPLETED");
+          setLoading(false);
+        } else if (data.destination) {
+           setResult(data.destination);
+           setStatus("COMPLETED");
+           setLoading(false);
+        }
       } else {
-        setError(data.error || "Failed to bypass link. Please try again.");
-        if (data.fallback) {
+        setError(data.message || data.error || "Failed to bypass link.");
+        setStatus("ERROR");
+        setLoading(false);
+        if (response.status === 403 || response.status === 502) {
             setShowFallback(true);
         }
       }
     } catch (err) {
       setError("An error occurred. Please try again later.");
-    } finally {
+      setStatus("ERROR");
       setLoading(false);
     }
   };
 
   const handleManualBypass = () => {
-    // This replicates the original userscript logic as a fallback
     const bypassUrl = `https://bypass.city/bypass?bypass=${encodeURIComponent(url)}&userscript=true`;
     window.open(bypassUrl, "_blank");
   };
@@ -67,6 +159,8 @@ export function BypassInput() {
     setResult(null);
     setError("");
     setShowFallback(false);
+    setStatus("IDLE");
+    if (pollInterval.current) clearInterval(pollInterval.current);
   };
 
   return (
@@ -109,6 +203,33 @@ export function BypassInput() {
               </div>
             </form>
 
+            {status !== "IDLE" && status !== "COMPLETED" && (
+                <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    className="mt-4 p-4 rounded-xl bg-card border border-border overflow-hidden"
+                >
+                    <div className="flex items-center justify-between mb-2">
+                        <span className={`font-bold flex items-center gap-2 ${statusConfigs[status].color}`}>
+                            {statusConfigs[status].icon}
+                            {statusConfigs[status].title}
+                        </span>
+                        {loading && <span className="text-[10px] text-foreground/40 uppercase tracking-widest animate-pulse">Live Status</span>}
+                    </div>
+                    <p className="text-sm text-foreground/60">{statusConfigs[status].text}</p>
+
+                    {status === "ACTIVE" && (
+                         <div className="mt-3 w-full bg-background rounded-full h-1 overflow-hidden">
+                            <motion.div
+                                className="bg-primary h-full"
+                                animate={{ x: ["-100%", "100%"] }}
+                                transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+                            />
+                         </div>
+                    )}
+                </motion.div>
+            )}
+
             {error && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
@@ -116,7 +237,7 @@ export function BypassInput() {
                 className="mt-4 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-center"
               >
                 <div className="flex items-center justify-center gap-2 text-red-400 text-sm font-medium mb-2">
-                    <AlertCircle size={16} />
+                    <AlertTriangle size={16} />
                     {error}
                 </div>
 
@@ -125,7 +246,7 @@ export function BypassInput() {
                         onClick={handleManualBypass}
                         className="text-xs bg-red-500/20 hover:bg-red-500/30 text-red-400 py-2 px-4 rounded-lg transition-all flex items-center gap-2 mx-auto"
                     >
-                        Try Alternative Bypass
+                        Try Manual Bypass on Bypass.city
                         <ExternalLink size={14} />
                     </button>
                 )}
