@@ -62,7 +62,7 @@ function Hero() {
             <Lock size={24} />
           </div>
           <h3 className="font-bold mb-2">Reliable</h3>
-          <p className="text-sm text-foreground/40 text-center">Powered by bypass.city technology for the highest success rate.</p>
+          <p className="text-sm text-foreground/40 text-center">Engineered for maximum reliability and success rate.</p>
         </div>
       </motion.div>
     </section>

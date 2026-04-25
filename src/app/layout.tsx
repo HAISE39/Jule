@@ -29,7 +29,7 @@ function Navbar() {
           </Link>
           <div className="hidden md:flex space-x-8">
             <Link href="/" className="hover:text-primary transition-colors">Home</Link>
-            <Link href="https://discord.gg/bypass-city" target="_blank" className="hover:text-primary transition-colors">Support</Link>
+            <Link href="https://wa.me/6285706400133" target="_blank" className="hover:text-primary transition-colors">Support</Link>
             <Link href="https://wa.me/6285706400133" target="_blank" className="hover:text-primary transition-colors">Contact</Link>
           </div>
         </div>
@@ -48,7 +48,6 @@ function Footer() {
           </div>
           <div className="flex space-x-6 text-sm">
             <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
-            <Link href="https://bypass.city" target="_blank" className="hover:text-primary transition-colors">Powered by Bypass.City</Link>
           </div>
         </div>
       </div>
