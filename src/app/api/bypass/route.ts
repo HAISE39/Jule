@@ -11,11 +11,14 @@ export async function POST(request: NextRequest) {
 
     const targetUrl = `https://skipped.lol/api/evade/${endpoint}`;
 
+    // We try to get the cookie first if needed, but here we just try the request
     const response = await fetch(targetUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Origin": "https://linkvertise.com",
+        "Referer": "https://linkvertise.com/",
       },
       body: JSON.stringify(data),
     });
@@ -23,8 +26,9 @@ export async function POST(request: NextRequest) {
     const result = await response.json();
     return NextResponse.json(result);
   } catch (error: any) {
-    console.error("Proxy error:", error);
-    return NextResponse.json({ error: error.message || "Proxy request failed" }, { status: 500 });
+    // If it's a redirect or anti-bot issue, we might get an error here
+    console.error("Proxy POST error:", error);
+    return NextResponse.json({ error: "Bypass API unreachable. Anti-bot protection (DiamWall) may be blocking the request.", details: error.message }, { status: 502 });
   }
 }
 
@@ -49,9 +53,11 @@ export async function GET(request: NextRequest) {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
       },
     });
+
     const result = await response.json();
     return NextResponse.json(result);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Proxy request failed" }, { status: 500 });
+    console.error("Proxy GET error:", error);
+    return NextResponse.json({ error: "Bypass API unreachable.", details: error.message }, { status: 502 });
   }
 }
