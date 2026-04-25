@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Search, ArrowRight, Loader2, Copy, ExternalLink, RefreshCw, AlertCircle, Zap, Hourglass, CheckCircle2, AlertTriangle } from "lucide-react";
 import { matchLink } from "@/lib/bypass-config";
 import { motion, AnimatePresence } from "framer-motion";
+import { Turnstile } from "@marsidev/react-turnstile";
 
 type BypassStatus = "IDLE" | "WAITING" | "ACTIVE" | "COMPLETED" | "ERROR" | "DELAYED";
 
@@ -22,8 +23,10 @@ export function BypassInput() {
   const [showFallback, setShowFallback] = useState(false);
   const [status, setStatus] = useState<BypassStatus>("IDLE");
   const [statusText, setStatusText] = useState("");
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   const pollInterval = useRef<NodeJS.Timeout | null>(null);
+  const turnstileRef = useRef<any>(null);
 
   const statusConfigs: Record<BypassStatus, StatusConfig> = {
     IDLE: { title: "", text: "", color: "", icon: null },
@@ -113,7 +116,7 @@ export function BypassInput() {
     setStatus("WAITING");
 
     try {
-      const response = await fetch(`/api/bypass?url=${encodeURIComponent(url)}`);
+      const response = await fetch(`/api/bypass?url=${encodeURIComponent(url)}&token=${captchaToken || ""}`);
       const data = await response.json();
 
       if (response.ok) {
@@ -160,6 +163,8 @@ export function BypassInput() {
     setError("");
     setShowFallback(false);
     setStatus("IDLE");
+    setCaptchaToken(null);
+    if (turnstileRef.current) turnstileRef.current.reset();
     if (pollInterval.current) clearInterval(pollInterval.current);
   };
 
@@ -200,6 +205,22 @@ export function BypassInput() {
                     </>
                   )}
                 </button>
+              </div>
+
+              <div className="mt-4 flex justify-center">
+                <Turnstile
+                  ref={turnstileRef}
+                  siteKey="0x4AAAAAADDO_vllqGneiGIuc9kTzvYFO8Y"
+                  onSuccess={(token) => setCaptchaToken(token)}
+                  onExpire={() => setCaptchaToken(null)}
+                  onError={() => {
+                    setCaptchaToken(null);
+                    setError("Captcha failed to load. Please refresh.");
+                  }}
+                  options={{
+                    theme: "dark",
+                  }}
+                />
               </div>
             </form>
 
