@@ -31,7 +31,15 @@ export async function GET(request: NextRequest) {
     // 1. Initial Request to the LootLabs page to get the slug/ID
     // Example LootLabs URL: https://lootlabs.gg/S0lV (slug is S0lV)
     const urlObj = new URL(url);
-    const slug = urlObj.pathname.split('/').pop();
+    const slug = urlObj.searchParams.get("fJjn") !== null ? "fJjn" : urlObj.pathname.split('/').pop();
+    const dataParam = urlObj.searchParams.get("data") || urlObj.searchParams.get("d");
+
+    if (dataParam) {
+      const decrypted = decryptUrl(dataParam);
+      if (decrypted && decrypted.includes('http')) {
+        return NextResponse.json({ destination: decrypted });
+      }
+    }
 
     if (!slug) {
         return NextResponse.json({ error: "Invalid LootLabs URL" }, { status: 400 });

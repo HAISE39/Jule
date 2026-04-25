@@ -16,7 +16,7 @@ export const regexObjects: LinkConfig[] = [
   },
   {
     name: "lootlabs",
-    regex: /^https?:\/\/(?:loot-link|loot-links|lootlinks|lootdest|links-loot|linksloot|lootlink|links\.lootlabs\.gg)\.(?:com|co|org|net|info|gg)/i,
+    regex: /^https?:\/\/(?:(?:loot-link|loot-links|lootlinks|lootdest|links-loot|linksloot|lootlink)\.(?:com|co|org|net|info|gg)|links\.lootlabs\.gg)/i,
     userscript_regex: [
         "https://*.lootdest.org/*",
         "https://lootdest.org/*",
@@ -28,6 +28,13 @@ export const regexObjects: LinkConfig[] = [
     ],
     valid_url_regex: /^https?:\/\/.+/,
     url_base: "https://loot-link.com"
+  },
+  {
+    name: "platorelay",
+    regex: /^https?:\/\/auth\.platorelay\.com/i,
+    userscript_regex: "https://auth.platorelay.com/*",
+    valid_url_regex: /^https?:\/\/auth\.platorelay\.com\/.+/,
+    url_base: "https://auth.platorelay.com"
   },
   {
     name: "linkvertise",
