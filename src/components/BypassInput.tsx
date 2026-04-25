@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Search, ArrowRight, Loader2, Copy, ExternalLink, RefreshCw } from "lucide-react";
+import { Search, ArrowRight, Loader2, Copy, ExternalLink, RefreshCw, AlertCircle, Zap } from "lucide-react";
 import { matchLink } from "@/lib/bypass-config";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -10,11 +10,13 @@ export function BypassInput() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const [showFallback, setShowFallback] = useState(false);
 
   const handleBypass = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setResult(null);
+    setShowFallback(false);
 
     if (!url) {
       setError("Please enter a URL");
@@ -37,12 +39,21 @@ export function BypassInput() {
         setResult(data.destination);
       } else {
         setError(data.error || "Failed to bypass link. Please try again.");
+        if (data.fallback) {
+            setShowFallback(true);
+        }
       }
     } catch (err) {
       setError("An error occurred. Please try again later.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleManualBypass = () => {
+    // This replicates the original userscript logic as a fallback
+    const bypassUrl = `https://bypass.city/bypass?bypass=${encodeURIComponent(url)}&userscript=true`;
+    window.open(bypassUrl, "_blank");
   };
 
   const copyToClipboard = () => {
@@ -55,6 +66,7 @@ export function BypassInput() {
     setUrl("");
     setResult(null);
     setError("");
+    setShowFallback(false);
   };
 
   return (
@@ -96,14 +108,28 @@ export function BypassInput() {
                 </button>
               </div>
             </form>
+
             {error && (
-              <motion.p
+              <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-red-400 text-sm mt-4 text-center"
+                className="mt-4 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-center"
               >
-                {error}
-              </motion.p>
+                <div className="flex items-center justify-center gap-2 text-red-400 text-sm font-medium mb-2">
+                    <AlertCircle size={16} />
+                    {error}
+                </div>
+
+                {showFallback && (
+                    <button
+                        onClick={handleManualBypass}
+                        className="text-xs bg-red-500/20 hover:bg-red-500/30 text-red-400 py-2 px-4 rounded-lg transition-all flex items-center gap-2 mx-auto"
+                    >
+                        Try Alternative Bypass
+                        <ExternalLink size={14} />
+                    </button>
+                )}
+              </motion.div>
             )}
           </motion.div>
         ) : (
@@ -153,23 +179,4 @@ export function BypassInput() {
       </AnimatePresence>
     </div>
   );
-}
-
-function Zap({ size, className }: { size: number, className: string }) {
-    return (
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width={size}
-            height={size}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className={className}
-        >
-            <path d="M4 14.71 12 2l1.6 9h6.4L12 22l-1.6-9H4z"/>
-        </svg>
-    )
 }

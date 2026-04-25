@@ -8,37 +8,52 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "URL is required" }, { status: 400 });
   }
 
-  try {
-    // Attempting to use a known public bypass API
-    // Note: Some APIs require specific headers or keys.
-    // This is a proxy to keep the logic server-side and avoid CORS.
-    const apiResponse = await fetch(`https://api.adbypass.org/bypass?url=${encodeURIComponent(url)}`, {
+  // Since most public APIs are restricted or unstable, we try a few known patterns.
+  // Many bypassers now require client-side solving (Turnstile/hCaptcha),
+  // so a server-side proxy is inherently limited.
+  const providers = [
+    {
+      name: "ADBypass",
+      url: (u: string) => `https://api2.adbypass.org/bypass?url=${encodeURIComponent(u)}`,
       method: "GET",
       headers: {
-        "Content-Type": "application/json",
+        "Referer": "https://adbypass.org/",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-      },
-    });
-
-    if (!apiResponse.ok) {
-        // Fallback or specific error handling
-        return NextResponse.json({ error: "Failed to bypass link. The provider might be temporarily down." }, { status: 500 });
+      }
     }
+  ];
 
-    const data = await apiResponse.json();
+  for (const provider of providers) {
+    try {
+      const options: RequestInit = {
+        method: provider.method,
+        headers: provider.headers,
+        next: { revalidate: 0 } // Don't cache failures
+      };
 
-    // The adbypass.org API usually returns { success: true, data: { destination: "..." } }
-    // or similar. Adjusting to common response formats.
-    if (data.destination || data.url || (data.data && data.data.destination)) {
-        return NextResponse.json({
+      const fetchUrl = typeof provider.url === "function" ? provider.url(url) : provider.url;
+      const apiResponse = await fetch(fetchUrl, options);
+
+      if (apiResponse.ok) {
+        const data = await apiResponse.json();
+        const destination = data.destination || data.url || (data.data && data.data.destination) || data.result;
+
+        if (destination && typeof destination === "string" && destination.startsWith("http")) {
+          return NextResponse.json({
             success: true,
-            destination: data.destination || data.url || data.data.destination
-        });
+            destination: destination,
+            provider: provider.name
+          });
+        }
+      }
+    } catch (error) {
+      console.error(`${provider.name} error:`, error);
     }
-
-    return NextResponse.json({ error: "Could not find destination link in response." }, { status: 500 });
-  } catch (error) {
-    console.error("Bypass API Error:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
+
+  // If all providers fail, return a 502 with instructions for the UI to show a fallback
+  return NextResponse.json({
+    error: "Automated bypass failed. This link might require manual verification.",
+    fallback: true
+  }, { status: 502 });
 }
